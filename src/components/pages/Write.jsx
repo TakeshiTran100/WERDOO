@@ -138,7 +138,7 @@ const Write = () => {
     x: 0,
     y: 0,
   });
-  const [chapterTitle, setChapterTitle] = React.useState(currentStory?.draftTitle || "");
+  const [chapterTitle, setChapterTitle] = React.useState(currentStory?.chapterTitle || "");
   const [chapSaveData, setChapSaveData] = React.useState({ title: "", status: "ongoing" });
   const [sidebarNotes, setSidebarNotes] = React.useState([]);
   const [pageLayout, setPageLayout] = React.useState("A4");
@@ -214,7 +214,7 @@ const Write = () => {
       title: currentStory?.title || "Truyện chưa đặt tên",
       category: currentStory?.category || "Không xác định",
       status: chapSaveData.status,
-      chapterTitle: currentStory?.chapterTitle || "",
+      chapterTitle: chapterTitle,
       content: editor.getHTML(),
       wordCount: wordCount,
       chapters: Math.max(currentStory?.chapters || 0, 1),
@@ -240,7 +240,6 @@ const Write = () => {
     }
 
     setShowSaveDialog(false);
-    setChapterTitle("");
     setChapSaveData({ title: "", status: "ongoing" });
   };
 

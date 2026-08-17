@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useStoryStore } from './store';
 import { supabase } from './lib/supabaseClient';
+import { getStories } from './services/storyService';
 import Auth from './components/Auth';
 import Sidebar from './components/Sidebar';
 import Home from './components/pages/Home';
@@ -30,6 +31,16 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+    React.useEffect(() => {
+    if (session?.user) {
+      getStories(session.user.id)
+        .then(setStories)
+        .catch((error) => {
+          console.error('Không thể tải stories:', error);
+        });
+    }
+  }, [session, setStories]);
 
   const renderPage = () => {
     switch (currentTab) {

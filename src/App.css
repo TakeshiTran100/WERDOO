@@ -1,0 +1,351 @@
+﻿/* TipTap Rich Text Editor Styles */
+.ProseMirror {
+  outline: none;
+  font-size: 16px;
+  line-height: 1.8;
+  word-wrap: break-word;
+  font-family: 'Georgia', 'Garamond', 'Times New Roman', serif;
+}
+
+.ProseMirror h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+  color: #d8b4fe;
+}
+
+.ProseMirror h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: #d8b4fe;
+}
+
+.ProseMirror p {
+  margin-bottom: 1rem;
+  color: #f3f4f6;
+}
+
+.ProseMirror strong {
+  font-weight: 700;
+  color: white;
+}
+
+.ProseMirror em {
+  font-style: italic;
+  color: #f3f4f6;
+}
+
+.ProseMirror u {
+  text-decoration: underline;
+}
+
+.ProseMirror s {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
+.ProseMirror blockquote {
+  border-left: 4px solid #a855f7;
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-right: 0;
+  font-style: italic;
+  color: #c4b5fd;
+  background: #441a69;
+  padding: 1rem;
+  border-radius: 0 8px 8px 0;
+  margin: 1rem 0;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  margin-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.ProseMirror li {
+  margin-bottom: 0.5rem;
+  color: #f3f4f6;
+}
+
+.ProseMirror a {
+  color: #60a5fa;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ProseMirror a:hover {
+  color: #93c5fd;
+}
+
+.ProseMirror code {
+  background: #1e293b;
+  color: #60a5fa;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.9em;
+}
+
+.ProseMirror pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #1e293b;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.ProseMirror pre code {
+  color: inherit;
+  padding: 0;
+  background: none;
+  font-size: 0.95em;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Custom Scrollbar in Components */
+.overflow-auto::-webkit-scrollbar {
+  width: 8px;
+}
+
+.overflow-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb {
+  background: #6366f1;
+  border-radius: 4px;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb:hover {
+  background: #818cf8;
+}
+
+.animate-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Font Style Classes */
+.font-sans {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.font-serif {
+  font-family: 'Georgia', 'Garamond', 'Times New Roman', serif;
+}
+
+.font-display {
+  font-family: 'Trebuchet MS', 'Lucida Grande', 'Verdana', sans-serif;
+  font-weight: 600;
+}
+
+.font-mono {
+  font-family: 'Monaco', 'Courier New', 'Courier', monospace;
+}
+
+.font-casual {
+  font-family: 'Segoe Print', 'Comic Sans MS', 'Courier New', monospace;
+}
+
+.font-elegant {
+  font-family: 'Palatino Linotype', 'Book Antiqua', 'Palatino', 'Times New Roman', serif;
+  letter-spacing: 0.5px;
+}
+
+.font-modern {
+  font-family: 'Segoe UI', 'Tahoma', 'Geneva', 'Verdana', sans-serif;
+  font-weight: 500;
+}
+
+.font-classic {
+  font-family: 'Times New Roman', 'Times', serif;
+  letter-spacing: 0.3px;
+}
+/* BeVietnamPro */
+@font-face { font-family: 'BeVietnamPro'; src: url('/fonts/BeVietnamPro-Thin.ttf'); font-weight: 100; }
+@font-face { font-family: 'BeVietnamPro'; src: url('/fonts/BeVietnamPro-Light.ttf'); font-weight: 300; }
+@font-face { font-family: 'BeVietnamPro'; src: url('/fonts/BeVietnamPro-Regular.ttf'); font-weight: 400; }
+@font-face { font-family: 'BeVietnamPro'; src: url('/fonts/BeVietnamPro-Medium.ttf'); font-weight: 500; }
+@font-face { font-family: 'BeVietnamPro'; src: url('/fonts/BeVietnamPro-SemiBold.ttf'); font-weight: 600; }
+@font-face { font-family: 'BeVietnamPro'; src: url('/fonts/BeVietnamPro-Bold.ttf'); font-weight: 700; }
+@font-face { font-family: 'BeVietnamPro'; src: url('/fonts/BeVietnamPro-ExtraBold.ttf'); font-weight: 800; }
+@font-face { font-family: 'BeVietnamPro'; src: url('/fonts/BeVietnamPro-Black.ttf'); font-weight: 900; }
+
+/* MomoTrustSans */
+@font-face { font-family: 'MomoTrustSans'; src: url('/fonts/MomoTrustSans-ExtraLight.ttf'); font-weight: 200; }
+@font-face { font-family: 'MomoTrustSans'; src: url('/fonts/MomoTrustSans-Light.ttf'); font-weight: 300; }
+@font-face { font-family: 'MomoTrustSans'; src: url('/fonts/MomoTrustSans-Regular.ttf'); font-weight: 400; }
+@font-face { font-family: 'MomoTrustSans'; src: url('/fonts/MomoTrustSans-Medium.ttf'); font-weight: 500; }
+@font-face { font-family: 'MomoTrustSans'; src: url('/fonts/MomoTrustSans-SemiBold.ttf'); font-weight: 600; }
+@font-face { font-family: 'MomoTrustSans'; src: url('/fonts/MomoTrustSans-Bold.ttf'); font-weight: 700; }
+@font-face { font-family: 'MomoTrustSans'; src: url('/fonts/MomoTrustSans-ExtraBold.ttf'); font-weight: 800; }
+
+/* Montserrat */
+@font-face { font-family: 'Montserrat'; src: url('/fonts/Montserrat-Thin.ttf'); font-weight: 100; }
+@font-face { font-family: 'Montserrat'; src: url('/fonts/Montserrat-Light.ttf'); font-weight: 300; }
+@font-face { font-family: 'Montserrat'; src: url('/fonts/Montserrat-Medium.ttf'); font-weight: 500; }
+@font-face { font-family: 'Montserrat'; src: url('/fonts/Montserrat-Bold.ttf'); font-weight: 700; }
+@font-face { font-family: 'Montserrat'; src: url('/fonts/Montserrat-ExtraBold.ttf'); font-weight: 800; }
+
+/* MontserratAlternates */
+@font-face { font-family: 'MontserratAlternates'; src: url('/fonts/MontserratAlternates-Thin.otf'); font-weight: 100; }
+@font-face { font-family: 'MontserratAlternates'; src: url('/fonts/MontserratAlternates-Light.otf'); font-weight: 300; }
+@font-face { font-family: 'MontserratAlternates'; src: url('/fonts/MontserratAlternates-SemiBold.otf'); font-weight: 600; }
+@font-face { font-family: 'MontserratAlternates'; src: url('/fonts/MontserratAlternates-Bold.otf'); font-weight: 700; }
+@font-face { font-family: 'MontserratAlternates'; src: url('/fonts/MontserratAlternates-ExtraBold.otf'); font-weight: 800; }
+
+/* SVN-Arial */
+@font-face { font-family: 'SVN-Arial'; src: url('/fonts/SVN-Arial Regular.ttf'); font-weight: 400; }
+@font-face { font-family: 'SVN-Arial'; src: url('/fonts/SVN-Arial Bold.ttf'); font-weight: 700; }
+
+/* ===== HELLO KITTY THEME ===== */
+.theme-hellokitty .flex.h-screen {
+  background-color: #fff5f5 !important;
+}
+
+/* Nền lưới nhẹ */
+.theme-hellokitty .bg-gray-900,
+.theme-hellokitty .bg-gray-800,
+.theme-hellokitty .bg-slate-900,
+.theme-hellokitty [class*="bg-gradient"] {
+  background: #fff5f5 !important;
+  
+}
+
+/* Card trắng */
+.theme-hellokitty .rounded-xl,
+.theme-hellokitty .rounded-2xl {
+  background-color: #fdf6f0 !important;
+  border-color: #ffd6d6 !important;
+}
+
+/* Nút chính → đỏ nhạt hơn */
+.theme-hellokitty [class*="from-pink-500"],
+.theme-hellokitty .bg-purple-600,
+.theme-hellokitty .bg-purple-500,
+.theme-hellokitty [class*="bg-gradient-to-r"] {
+  background: #cc1a35 !important;
+  background-image: none !important;
+}
+
+/* Nút "Thêm mới", "Tiếp tục" → xanh dương mint */
+.theme-hellokitty .bg-cyan-600,
+.theme-hellokitty .bg-blue-600,
+.theme-hellokitty .bg-purple-600.hover\:bg-purple-500 {
+  background: #4db8c8 !important;
+}
+
+/* Stats cards → màu riêng */
+.theme-hellokitty [class*="from-cyan-900"],
+.theme-hellokitty [class*="from-blue-900"] {
+  background: #e8f7f9 !important;
+  background-image: none !important;
+  border-color: #4db8c8 !important;
+}
+
+.theme-hellokitty [class*="from-orange-900"],
+.theme-hellokitty [class*="from-red-900"] {
+  background: #fff8e1 !important;
+  background-image: none !important;
+  border-color: #f4c430 !important;
+}
+
+.theme-hellokitty [class*="from-purple-900"],
+.theme-hellokitty [class*="from-pink-900"] {
+  background: #fff0f5 !important;
+  background-image: none !important;
+  border-color: #ffb3cc !important;
+}
+
+/* Chữ */
+.theme-hellokitty .text-white {
+  color: #2d0a0a !important;
+}
+
+.theme-hellokitty .text-gray-300,
+.theme-hellokitty .text-gray-400 {
+  color: #8b4045 !important;
+}
+
+.theme-hellokitty .text-cyan-400 {
+  color: #4db8c8 !important;
+}
+
+.theme-hellokitty .text-orange-400 {
+  color: #f4a020 !important;
+}
+
+/* Input trong Ghi Chú */
+.theme-hellokitty .bg-gray-700,
+.theme-hellokitty [class*="bg-gray-700"] {
+  background-color: #fff0f0 !important;
+  color: #2d0a0a !important;
+  border-color: #ffd6d6 !important;
+}
+
+/* Toolbar Viết → trắng viền đỏ nhẹ */
+.theme-hellokitty .bg-\[\#2d2520\] {
+  background-color: #fdf6f0 !important;
+  border-bottom: 2px solid #cc1a35 !important;
+}
+
+.theme-hellokitty .bg-\[\#2d2520\] .text-stone-100,
+.theme-hellokitty .bg-\[\#2d2520\] .text-stone-200,
+.theme-hellokitty .bg-\[\#2d2520\] .text-stone-400 {
+  color: #2d0a0a !important;
+}
+
+.theme-hellokitty .bg-\[\#2d2520\] .text-yellow-400 {
+  color: #e6a817 !important;
+}
+
+.theme-hellokitty .bg-\[\#2d2520\] .text-green-400 {
+  color: #2e9e5b !important;
+}
+
+/* Vùng viết → trắng sạch, lưới rất nhạt */
+.theme-hellokitty .bg-\[\#f5f0e8\] {
+  background-color: #fdf6f0 !important;
+  
+}
+
+/* Quote section */
+.theme-hellokitty [class*="from-indigo-900"] {
+  background: #e8f0ff !important;
+  background-image: none !important;
+  border-color: #a0b4f0 !important;
+}

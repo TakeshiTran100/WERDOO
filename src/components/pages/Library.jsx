@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useStoryStore } from '../../store';
+import { supabase } from '../../lib/supabaseClient';
+import { createStory } from '../../services/storyService';
 import { X } from 'lucide-react';
 import searchBar from '../../assets/Thanh Search.png';
 import Cropper from 'react-easy-crop';
@@ -172,7 +174,7 @@ const ShelfRow = ({ label, storyList, hoveredBook, setHoveredBook, handleWriteSt
 };
 
 const Library = () => {
-  const { stories, setCurrentStory, setCurrentTab, addStory, updateStory, deleteStory } = useStoryStore();
+  const { stories, setStories, setCurrentStory, setCurrentTab, addStory, updateStory, deleteStory } = useStoryStore();
   const [libraryView, setLibraryView] = React.useState(false);
   const [search, setSearch] = React.useState('');
   const [showCreateModal, setShowCreateModal] = React.useState(false);
@@ -216,11 +218,29 @@ const Library = () => {
     setCurrentTab('write');
   };
 
-  const handleCreateStory = () => {
+  const handleCreateStory = async () => {
     if (!newStoryData.title.trim()) { alert('Vui lòng nhập tên truyện'); return; }
-    addStory({ title: newStoryData.title, description: newStoryData.description, category: newStoryData.category, status: 'ongoing', wordCount: 0, chapters: 0, ...(newStoryData.coverPreview && { coverImage: newStoryData.coverPreview }) });
-    setShowCreateModal(false);
-    setNewStoryData({ title: '', description: '', category: '', coverPreview: null });
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { alert('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.'); return; }
+
+    try {
+      const created = await createStory(user.id, {
+        title: newStoryData.title,
+        description: newStoryData.description,
+        category: newStoryData.category,
+        status: 'ongoing',
+        wordCount: 0,
+        chapters: 0,
+        coverImage: newStoryData.coverPreview || null,
+      });
+      setStories([...stories, created]);
+      setShowCreateModal(false);
+      setNewStoryData({ title: '', description: '', category: '', coverPreview: null });
+    } catch (err) {
+      console.error('Lỗi khi tạo truyện:', err);
+      alert('Tạo truyện thất bại, vui lòng thử lại.');
+    }
   };
 
   const [hoveredBook, setHoveredBook] = React.useState(null);

@@ -61,3 +61,42 @@ export async function createStory(userId, story) {
         updatedAt: data.updated_at,
     };
 }
+
+export async function updateStoryInSupabase(storyId, updates) {
+    const payload = {
+        title: updates.title,
+        description: updates.description,
+        category: updates.category,
+        status: updates.status,
+        cover_image: updates.coverImage,
+        content: updates.content,
+        chapter_title: updates.chapterTitle,
+        word_count: updates.wordCount,
+        chapters: updates.chapters,
+        updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+        .from('stories')
+        .update(payload)
+        .eq('id', storyId)
+        .select()
+        .single();
+
+    if (error) throw error;
+
+    return {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        status: data.status,
+        coverImage: data.cover_image,
+        content: data.content,
+        chapterTitle: data.chapter_title,
+        wordCount: data.word_count,
+        chapters: data.chapters,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+    };
+}

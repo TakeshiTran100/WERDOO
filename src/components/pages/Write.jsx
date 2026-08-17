@@ -18,6 +18,7 @@ import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import { motion } from "framer-motion";
 import { useStoryStore } from "../../store";
+import { updateStoryInSupabase } from "../../services/storyService";
 import {
   Bold,
   Italic,
@@ -208,28 +209,29 @@ const Write = () => {
     }
   }, [editor, calculateWordCount]);
 
-  const handleSaveStory = () => {
-    if (!chapSaveData.title.trim()) {
-      alert("Vui lòng nhập tên chương");
-      return;
-    }
-
+  const handleSaveStory = async () => {
     const storyData = {
       title: currentStory?.title || "Truyện chưa đặt tên",
       category: currentStory?.category || "Không xác định",
       status: chapSaveData.status,
-      chapterTitle: chapSaveData.title,
+      chapterTitle: currentStory?.chapterTitle || "",
       content: editor.getHTML(),
       wordCount: wordCount,
-      chapters: ((currentStory?.chapters || 0) + 1),
-      updatedAt: new Date(),
+      chapters: Math.max(currentStory?.chapters || 0, 1),
       description: currentStory?.description || "",
       coverImage: currentStory?.coverImage || null,
     };
 
     if (currentStory && currentStory.id) {
-      updateStory(currentStory.id, storyData);
-      setCurrentStory({ ...currentStory, ...storyData });
+      try {
+        const updated = await updateStoryInSupabase(currentStory.id, storyData);
+        updateStory(currentStory.id, updated);
+        setCurrentStory({ ...currentStory, ...updated });
+      } catch (err) {
+        console.error("Lỗi khi lưu truyện:", err);
+        alert("Lưu truyện thất bại, vui lòng thử lại.");
+        return;
+      }
     } else {
       const newId = Date.now();
       const newStory = { ...storyData, id: newId, createdAt: new Date() };
@@ -239,7 +241,6 @@ const Write = () => {
 
     setShowSaveDialog(false);
     setChapterTitle("");
-    editor.commands.setContent("<p></p>");
     setChapSaveData({ title: "", status: "ongoing" });
   };
 
@@ -367,7 +368,7 @@ const Write = () => {
                 <span>Ghi chú</span>
               </button>
               <button
-                onClick={() => setShowSaveDialog(true)}
+                onClick={handleSaveStory}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-green-400 hover:bg-green-400/10"
               >
                 <Save size={16} />
@@ -480,7 +481,7 @@ const Write = () => {
           <div className="mb-8 pb-6 border-b border-stone-300" onClick={(e) => e.stopPropagation()}>
             <textarea
               value={chapterTitle}
-              onChange={(e) => { setChapterTitle(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; clearTimeout(window._titleSaveTimer); window._titleSaveTimer = setTimeout(() => { useStoryStore.getState().setCurrentStory({ ...useStoryStore.getState().currentStory, draftTitle: e.target.value }); }, 1000); }}
+              onChange={(e) => { setChapterTitle(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); editor?.chain().focus().run(); } }}
               rows={1}
               className="w-full bg-transparent text-center text-3xl font-bold text-stone-800 focus:outline-none placeholder-stone-400 resize-none overflow-hidden"

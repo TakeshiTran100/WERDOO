@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useStoryStore } from './store';
+import { supabase } from './lib/supabaseClient';
+import Auth from './components/Auth';
 import Sidebar from './components/Sidebar';
 import Home from './components/pages/Home';
 import Library from './components/pages/Library';
@@ -15,10 +17,18 @@ import './App.css';
 
 function App() {
   const { currentTab, isDarkMode, setStories, setCurrentStory, stories, isWriteFullscreen } = useStoryStore();
+  const [session, setSession] = React.useState(undefined);
 
   React.useEffect(() => {
-    // Không tự động load mock data nữa
-    // Data được load từ localStorage qua store
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const renderPage = () => {
@@ -49,6 +59,18 @@ function App() {
   };
 
   const { currentTheme } = useStoryStore();
+
+  if (session === undefined) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-900 text-white">
+        Đang tải...
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Auth />;
+  }
 
   return (
     <div className={`${isDarkMode ? 'dark' : ''} theme-${currentTheme}`}>

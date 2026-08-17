@@ -12,6 +12,7 @@ import {
   Sun,
 } from "lucide-react";
 import { useStoryStore } from "../store";
+import { supabase } from "../lib/supabaseClient";
 
 const THEME_STYLES = {
   default: {
@@ -115,6 +116,13 @@ const Sidebar = () => {
           <p className={`text-xs ${theme.subText}`}>Đang hoạt động</p>
           <p className={`text-sm font-semibold ${theme.accentText}`}>Nhà văn của tôi</p>
         </div>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          onClick={() => supabase.auth.signOut()}
+          className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all ${theme.bottomBtn}`}
+        >
+          <span className="text-sm font-medium">Đăng xuất</span>
+        </motion.button>
       </div>
     </motion.div>
   );

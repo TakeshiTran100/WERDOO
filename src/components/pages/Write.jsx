@@ -126,6 +126,9 @@ const Write = () => {
     notes,
   } = useStoryStore();
   const [showSaveDialog, setShowSaveDialog] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [autosaveStatus, setAutosaveStatus] = React.useState("idle");
+  const [lastSavedAt, setLastSavedAt] = React.useState(null);
   const [saveData, setSaveData] = React.useState({
     title: "",
     category: "",
@@ -229,61 +232,83 @@ const Write = () => {
     window._autoSaveTimer = setTimeout(async () => {
       const latest = useStoryStore.getState().currentStory;
       if (!latest?.id || !editor) return;
-
+      setAutosaveStatus("saving");
       const freshContent = editor.getHTML();
       const freshChapterTitle = chapterTitleRef.current;
-
-      useStoryStore.getState().updateCurrentStory({
-        content: freshContent,
-        chapterTitle: freshChapterTitle,
-      });
-
+      useStoryStore.getState().updateCurrentStory({ content: freshContent, chapterTitle: freshChapterTitle });
       try {
         await autosaveStoryInSupabase(latest.id, {
           content: freshContent,
           chapterTitle: freshChapterTitle,
           wordCount: wordCountRef.current,
         });
+        setAutosaveStatus("saved");
+        setLastSavedAt(new Date());
       } catch (err) {
         console.error("Autosave lỗi:", err);
+        setAutosaveStatus("error");
       }
     }, 1000);
   };
 
   const handleSaveStory = async () => {
     clearTimeout(window._autoSaveTimer);
-    const storyData = {
-      title: currentStory?.title || "Truyện chưa đặt tên",
-      category: currentStory?.category || "Không xác định",
-      status: chapSaveData.status,
-      chapterTitle: chapterTitle,
-      content: editor.getHTML(),
-      wordCount: wordCount,
-      chapters: Math.max(currentStory?.chapters || 0, 1),
-      description: currentStory?.description || "",
-      coverImage: currentStory?.coverImage || null,
+    setIsSaving(true);
+    try {
+      const storyData = {
+        title: currentStory?.title || "Truyện chưa đặt tên",
+        category: currentStory?.category || "Không xác định",
+        status: chapSaveData.status,
+        chapterTitle: chapterTitle,
+        content: editor.getHTML(),
+        wordCount: wordCount,
+        chapters: Math.max(currentStory?.chapters || 0, 1),
+        description: currentStory?.description || "",
+        coverImage: currentStory?.coverImage || null,
+      };
+
+      if (currentStory && currentStory.id) {
+        try {
+          const updated = await updateStoryInSupabase(currentStory.id, storyData);
+          updateStory(currentStory.id, updated);
+          setCurrentStory({ ...currentStory, ...updated });
+        } catch (err) {
+          console.error("Lỗi khi lưu truyện:", err);
+          alert("Lưu truyện thất bại, vui lòng thử lại.");
+          return;
+        }
+      } else {
+        const newId = Date.now();
+        const newStory = { ...storyData, id: newId, createdAt: new Date() };
+        addStory(newStory);
+        setCurrentStory(newStory);
+      }
+
+      setShowSaveDialog(false);
+      setChapSaveData({ title: "", status: "ongoing" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      const isSaveShortcut =
+        (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s";
+
+      if (!isSaveShortcut) return;
+
+      e.preventDefault();
+
+      if (isSaving) return;
+
+      handleSaveStory();
     };
 
-    if (currentStory && currentStory.id) {
-      try {
-        const updated = await updateStoryInSupabase(currentStory.id, storyData);
-        updateStory(currentStory.id, updated);
-        setCurrentStory({ ...currentStory, ...updated });
-      } catch (err) {
-        console.error("Lỗi khi lưu truyện:", err);
-        alert("Lưu truyện thất bại, vui lòng thử lại.");
-        return;
-      }
-    } else {
-      const newId = Date.now();
-      const newStory = { ...storyData, id: newId, createdAt: new Date() };
-      addStory(newStory);
-      setCurrentStory(newStory);
-    }
+    window.addEventListener("keydown", handleKeyDown);
 
-    setShowSaveDialog(false);
-    setChapSaveData({ title: "", status: "ongoing" });
-  };
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isSaving]);
 
   const addHeading = (level) => {
     editor.chain().focus().toggleHeading({ level }).run();
@@ -413,12 +438,19 @@ const Write = () => {
                 <Lightbulb size={16} />
                 <span>Ghi chú</span>
               </button>
+              <span className="text-xs text-stone-400 mr-2">
+                {autosaveStatus === "saving" && "Đang tự động lưu..."}
+                {autosaveStatus === "saved" && lastSavedAt && `Đã lưu ${lastSavedAt.toLocaleTimeString("vi-VN")}`}
+                {autosaveStatus === "error" && "Lỗi tự động lưu"}
+              </span>
+
               <button
                 onClick={handleSaveStory}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-green-400 hover:bg-green-400/10"
+                disabled={isSaving}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-green-400 hover:bg-green-400/10 disabled:opacity-50"
               >
                 <Save size={16} />
-                <span>Lưu</span>
+                <span>{isSaving ? "Đang lưu..." : "Lưu"}</span>
               </button>
             </div>
           </div>
@@ -728,10 +760,11 @@ const Write = () => {
                 </button>
                 <button
                   onClick={handleSaveStory}
-                  className="flex-1 px-4 py-2 rounded-lg font-semibold text-white"
+                  disabled={isSaving}
+                  className="flex-1 px-4 py-2 rounded-lg font-semibold text-white disabled:opacity-50"
                   style={{ backgroundColor: "#9b2335" }}
                 >
-                  Lưu & Viết Chap Mới ✨
+                  {isSaving ? "Đang lưu..." : "Lưu & Viết Chap Mới ✨"}
                 </button>
               </div>
             </div>

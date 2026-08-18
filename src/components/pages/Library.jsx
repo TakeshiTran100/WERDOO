@@ -182,10 +182,12 @@ const Library = () => {
   const [showEditModal, setShowEditModal] = React.useState(false);
   const [editingStory, setEditingStory] = React.useState(null);
   const [editData, setEditData] = React.useState({ title: '', description: '', category: '', cover: null, coverPreview: null });
+  const [actionError, setActionError] = React.useState(null);
 
   const handleOpenEdit = (story) => {
     setEditingStory(story);
     setEditData({ title: story.title, description: story.description || '', category: story.category || '', cover: null, coverPreview: story.coverImage || null });
+    setActionError(null);
     setShowEditModal(true);
   };
 
@@ -198,7 +200,7 @@ const Library = () => {
       setShowEditModal(false);
     } catch (err) {
       console.error('Lỗi khi cập nhật truyện:', err);
-      alert('Cập nhật thất bại, vui lòng thử lại.');
+      setActionError('Cập nhật thất bại, vui lòng thử lại.');
     }
   };
 
@@ -210,7 +212,7 @@ const Library = () => {
         setShowEditModal(false);
       } catch (err) {
         console.error('Lỗi khi xóa truyện:', err);
-        alert('Xóa truyện thất bại, vui lòng thử lại.');
+        setActionError('Xóa thất bại, vui lòng thử lại.');
       }
     }
   };
@@ -252,7 +254,7 @@ const Library = () => {
       setNewStoryData({ title: '', description: '', category: '', coverPreview: null });
     } catch (err) {
       console.error('Lỗi khi tạo truyện:', err);
-      alert('Tạo truyện thất bại, vui lòng thử lại.');
+      setActionError('Tạo truyện thất bại, vui lòng thử lại.');
     }
   };
 
@@ -287,7 +289,7 @@ const Library = () => {
           alt="tạo mới"
           className="cursor-pointer hover:scale-110 hover:brightness-110 active:scale-95 transition-all duration-150 drop-shadow-lg hover:drop-shadow-xl"
           style={{ height: 56 }}
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => { setActionError(null); setShowCreateModal(true); }}
         />
       </div>
 
@@ -401,6 +403,7 @@ const Library = () => {
               ))}
             </div>
             {/* Buttons */}
+            {actionError && <p style={{ color: '#c0392b', fontSize: 12, marginTop: 12 }}>{actionError}</p>}
             <div style={{ display: 'flex', gap: 10, marginTop: 28 }}>
               <button onClick={() => setShowCreateModal(false)}
                 style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: 'transparent', color: '#c4a0a3', fontSize: 13, cursor: 'pointer', fontFamily: "'Be Vietnam Pro', sans-serif" }}>Hủy</button>
@@ -443,6 +446,7 @@ const Library = () => {
               ))}
             </div>
 
+            {actionError && <p style={{ color: '#c0392b', fontSize: 12, marginBottom: 8 }}>{actionError}</p>}
             <div className="flex gap-3 mt-6">
               <button onClick={handleDeleteStory} className="py-2 px-4 rounded-lg font-semibold text-white" style={{ backgroundColor: '#c0392b' }}>🗑 Xóa</button>
               <button onClick={() => setShowEditModal(false)} className="flex-1 py-2 rounded-lg" style={{ backgroundColor: '#e8c8c8', color: '#9b2335' }}>Hủy</button>

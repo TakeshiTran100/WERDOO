@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useStoryStore } from '../../store';
 import { supabase } from '../../lib/supabaseClient';
-import { createStory, updateStoryMetadataInSupabase } from '../../services/storyService';
+import { createStory, updateStoryMetadataInSupabase, deleteStoryInSupabase } from '../../services/storyService';
 import { X } from 'lucide-react';
 import searchBar from '../../assets/Thanh Search.png';
 import Cropper from 'react-easy-crop';
@@ -202,10 +202,16 @@ const Library = () => {
     }
   };
 
-  const handleDeleteStory = () => {
+  const handleDeleteStory = async () => {
     if (window.confirm(`Xóa truyện "${editingStory.title}"?`)) {
-      deleteStory(editingStory.id);
-      setShowEditModal(false);
+      try {
+        await deleteStoryInSupabase(editingStory.id);
+        deleteStory(editingStory.id);
+        setShowEditModal(false);
+      } catch (err) {
+        console.error('Lỗi khi xóa truyện:', err);
+        alert('Xóa truyện thất bại, vui lòng thử lại.');
+      }
     }
   };
 

@@ -18,7 +18,7 @@ import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import { motion } from "framer-motion";
 import { useStoryStore } from "../../store";
-import { updateStoryInSupabase } from "../../services/storyService";
+import { updateStoryInSupabase, autosaveStoryInSupabase } from "../../services/storyService";
 import {
   Bold,
   Italic,
@@ -139,6 +139,15 @@ const Write = () => {
     y: 0,
   });
   const [chapterTitle, setChapterTitle] = React.useState(currentStory?.chapterTitle || "");
+  const chapterTitleRef = React.useRef(chapterTitle);
+  const titleEditedRef = React.useRef(false);
+  React.useEffect(() => { chapterTitleRef.current = chapterTitle; }, [chapterTitle]);
+
+  React.useEffect(() => {
+    if (!titleEditedRef.current && currentStory?.chapterTitle !== undefined && currentStory.chapterTitle !== chapterTitle) {
+      setChapterTitle(currentStory.chapterTitle);
+    }
+  }, [currentStory?.chapterTitle]);
   const [chapSaveData, setChapSaveData] = React.useState({ title: "", status: "ongoing" });
   const [sidebarNotes, setSidebarNotes] = React.useState([]);
   const [pageLayout, setPageLayout] = React.useState("A4");
@@ -178,17 +187,17 @@ const Write = () => {
       currentStory?.content ||
       "<p></p>",
     onUpdate: ({ editor }) => {
-      clearTimeout(window._autoSaveTimer);
-      window._autoSaveTimer = setTimeout(() => {
-        useStoryStore.getState().setCurrentStory({
-          ...useStoryStore.getState().currentStory,
-          content: editor.getHTML(),
-        });
-      }, 1000);
+      useStoryStore.getState().setCurrentStory({
+        ...useStoryStore.getState().currentStory,
+        content: editor.getHTML(),
+      });
+      scheduleAutosave();
     },
   });
 
   const [wordCount, setWordCount] = React.useState(0);
+  const wordCountRef = React.useRef(0);
+  React.useEffect(() => { wordCountRef.current = wordCount; }, [wordCount]);
   const [isFocus, setIsFocus] = React.useState(false);
 
   const calculateWordCount = useCallback(() => {
@@ -209,7 +218,25 @@ const Write = () => {
     }
   }, [editor, calculateWordCount]);
 
+  const scheduleAutosave = () => {
+    clearTimeout(window._autoSaveTimer);
+    window._autoSaveTimer = setTimeout(async () => {
+      const latest = useStoryStore.getState().currentStory;
+      if (!latest?.id) return;
+      try {
+        await autosaveStoryInSupabase(latest.id, {
+          content: latest.content,
+          chapterTitle: chapterTitleRef.current,
+          wordCount: wordCountRef.current,
+        });
+      } catch (err) {
+        console.error("Autosave lỗi:", err);
+      }
+    }, 1000);
+  };
+
   const handleSaveStory = async () => {
+    clearTimeout(window._autoSaveTimer);
     const storyData = {
       title: currentStory?.title || "Truyện chưa đặt tên",
       category: currentStory?.category || "Không xác định",
@@ -480,7 +507,7 @@ const Write = () => {
           <div className="mb-8 pb-6 border-b border-stone-300" onClick={(e) => e.stopPropagation()}>
             <textarea
               value={chapterTitle}
-              onChange={(e) => { setChapterTitle(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+              onChange={(e) => { titleEditedRef.current = true; setChapterTitle(e.target.value); useStoryStore.getState().updateCurrentStory({ chapterTitle: e.target.value }); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; scheduleAutosave(); }}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); editor?.chain().focus().run(); } }}
               rows={1}
               className="w-full bg-transparent text-center text-3xl font-bold text-stone-800 focus:outline-none placeholder-stone-400 resize-none overflow-hidden"

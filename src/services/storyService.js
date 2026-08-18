@@ -145,3 +145,29 @@ export async function updateStoryInSupabase(storyId, updates) {
         updatedAt: data.updated_at,
     };
 }
+
+export async function autosaveStoryInSupabase(storyId, draft) {
+    const payload = {
+        content: draft.content,
+        chapter_title: draft.chapterTitle,
+        word_count: draft.wordCount,
+        updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+        .from('stories')
+        .update(payload)
+        .eq('id', storyId)
+        .select()
+        .single();
+
+    if (error) throw error;
+
+    return {
+        id: data.id,
+        content: data.content,
+        chapterTitle: data.chapter_title,
+        wordCount: data.word_count,
+        updatedAt: data.updated_at,
+    };
+}

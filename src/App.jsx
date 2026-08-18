@@ -32,10 +32,17 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-    React.useEffect(() => {
+        React.useEffect(() => {
     if (session?.user) {
       getStories(session.user.id)
-        .then(setStories)
+        .then((fetched) => {
+          setStories(fetched);
+          const { currentStory, setCurrentStory } = useStoryStore.getState();
+          if (currentStory?.id) {
+            const matched = fetched.find((s) => s.id === currentStory.id);
+            if (matched) setCurrentStory(matched);
+          }
+        })
         .catch((error) => {
           console.error('Không thể tải stories:', error);
         });

@@ -6,6 +6,8 @@ import btnBYC from "../../assets/2 - Button BYC.png";
 import btnWF from "../../assets/3- Button WF.png";
 import logo2 from "../../assets/logo2.png";
 import { mockCharacters } from "../../data/mockData";
+import { supabase } from "../../lib/supabaseClient";
+import { createStory } from "../../services/storyService";
 
 const Home = () => {
   const {
@@ -20,7 +22,7 @@ const Home = () => {
   } = useStoryStore();
 
   const allChars = (worlds || []).flatMap(w => w.characters || []);
-const [showCreateDialog, setShowCreateDialog] = React.useState(false);
+  const [showCreateDialog, setShowCreateDialog] = React.useState(false);
   const [showWorkflowDialog, setShowWorkflowDialog] = React.useState(false);
   const [newWorkflow, setNewWorkflow] = React.useState({
     title: "",
@@ -37,23 +39,38 @@ const [showCreateDialog, setShowCreateDialog] = React.useState(false);
     coverImage: null,
   });
 
-  const handleCreateStory = () => {
+  const handleCreateStory = async () => {
     if (!newStory.title.trim()) {
       alert("Vui lòng nhập tiêu đề truyện");
       return;
     }
-    const story = {
-      title: newStory.title,
-      description: newStory.description,
-      category: newStory.category || "Không xác định",
-      coverImage: newStory.coverImage,
-      status: "ongoing",
-      content: "",
-      wordCount: 0,
-    };
-    setCurrentStory(story);
-    setShowCreateDialog(false);
-    setCurrentTab("write");
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      alert("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.");
+      return;
+    }
+
+    try {
+      const created = await createStory(user.id, {
+        title: newStory.title,
+        description: newStory.description,
+        category: newStory.category || "Không xác định",
+        coverImage: newStory.coverImage,
+        status: "ongoing",
+        content: "",
+        wordCount: 0,
+        chapters: 0,
+      });
+
+      setCurrentStory(created);
+      setShowCreateDialog(false);
+      setCurrentTab("write");
+    } catch (err) {
+      console.error("Lỗi khi tạo truyện:", err);
+      alert("Tạo truyện thất bại, vui lòng thử lại.");
+    }
   };
 
   const handleCoverImage = (e) => {
@@ -105,12 +122,12 @@ const [showCreateDialog, setShowCreateDialog] = React.useState(false);
         backgroundSize: "50px 50px",
       }}
     >
-     {/* Top Bar + Logo cùng hàng */}
+      {/* Top Bar + Logo cùng hàng */}
       <div className="flex justify-between items-center mb-4">
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => setCurrentTab("write")}
+          onClick={() => setShowCreateDialog(true)}
           className="px-6 py-3 rounded-full text-white font-bold text-base shadow-lg flex items-center gap-2"
           style={{ backgroundColor: "#DD7E83" }}
         >
@@ -227,20 +244,20 @@ const [showCreateDialog, setShowCreateDialog] = React.useState(false);
             }}
           >
             {worlds.slice(0, 4).map((world, i) => (
-  <div
-    key={world.id}
-    className="w-32 h-32 rounded-xl shadow-xl flex items-center justify-center text-2xl font-bold text-white overflow-hidden"
-    style={{
-      backgroundColor: "#8fafc4",
-      transform: `rotate(${(i - 1.5) * 6}deg)`,
-      backgroundImage: world.cover && world.coverType !== 'emoji' ? `url(${world.cover})` : 'none',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-    }}
-  >
-    {(!world.cover || world.coverType === 'emoji') ? (world.emoji || '🌍') : ''}
-  </div>
-))}
+              <div
+                key={world.id}
+                className="w-32 h-32 rounded-xl shadow-xl flex items-center justify-center text-2xl font-bold text-white overflow-hidden"
+                style={{
+                  backgroundColor: "#8fafc4",
+                  transform: `rotate(${(i - 1.5) * 6}deg)`,
+                  backgroundImage: world.cover && world.coverType !== 'emoji' ? `url(${world.cover})` : 'none',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+              >
+                {(!world.cover || world.coverType === 'emoji') ? (world.emoji || '🌍') : ''}
+              </div>
+            ))}
           </motion.div>
 
           <motion.img

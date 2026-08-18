@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useStoryStore } from '../../store';
 import { supabase } from '../../lib/supabaseClient';
-import { createStory } from '../../services/storyService';
+import { createStory, updateStoryMetadataInSupabase } from '../../services/storyService';
 import { X } from 'lucide-react';
 import searchBar from '../../assets/Thanh Search.png';
 import Cropper from 'react-easy-crop';
@@ -189,10 +189,17 @@ const Library = () => {
     setShowEditModal(true);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editData.title.trim()) { alert('Vui lòng nhập tên truyện'); return; }
-    updateStory(editingStory.id, { title: editData.title, description: editData.description, category: editData.category, ...(editData.coverPreview && { coverImage: editData.coverPreview }) });
-    setShowEditModal(false);
+    const metadata = { title: editData.title, description: editData.description, category: editData.category, ...(editData.coverPreview && { coverImage: editData.coverPreview }) };
+    try {
+      const updated = await updateStoryMetadataInSupabase(editingStory.id, metadata);
+      updateStory(editingStory.id, updated);
+      setShowEditModal(false);
+    } catch (err) {
+      console.error('Lỗi khi cập nhật truyện:', err);
+      alert('Cập nhật thất bại, vui lòng thử lại.');
+    }
   };
 
   const handleDeleteStory = () => {

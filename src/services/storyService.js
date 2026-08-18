@@ -62,6 +62,51 @@ export async function createStory(userId, story) {
     };
 }
 
+export async function updateStoryMetadataInSupabase(storyId, metadata) {
+    const payload = {
+        title: metadata.title,
+        description: metadata.description,
+        category: metadata.category,
+        cover_image: metadata.coverImage,
+        updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+        .from('stories')
+        .update(payload)
+        .eq('id', storyId)
+        .select()
+        .single();
+
+    if (error) throw error;
+
+    return {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        status: data.status,
+        coverImage: data.cover_image,
+        content: data.content,
+        chapterTitle: data.chapter_title,
+        wordCount: data.word_count,
+        chapters: data.chapters,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+    };
+}
+
+export async function deleteStoryInSupabase(storyId) {
+    const { error } = await supabase
+        .from('stories')
+        .delete()
+        .eq('id', storyId);
+
+    if (error) throw error;
+
+    return true;
+}
+
 export async function updateStoryInSupabase(storyId, updates) {
     const payload = {
         title: updates.title,

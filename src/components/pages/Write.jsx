@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useLayoutEffect } from "react";
 import { useEditor, EditorContent, BubbleMenu } from "@tiptap/react";
 import { Extension, extensions } from "@tiptap/core";
 import Document from "@tiptap/extension-document";
@@ -140,8 +140,18 @@ const Write = () => {
   });
   const [chapterTitle, setChapterTitle] = React.useState(currentStory?.chapterTitle || "");
   const chapterTitleRef = React.useRef(chapterTitle);
+  const chapterTitleTextareaRef = React.useRef(null);
   const titleEditedRef = React.useRef(false);
+
   React.useEffect(() => { chapterTitleRef.current = chapterTitle; }, [chapterTitle]);
+
+  useLayoutEffect(() => {
+    const el = chapterTitleTextareaRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = el.scrollHeight + 'px';
+    }
+  }, [chapterTitle]);
 
   React.useEffect(() => {
     if (!titleEditedRef.current && currentStory?.chapterTitle !== undefined && currentStory.chapterTitle !== chapterTitle) {
@@ -186,11 +196,7 @@ const Write = () => {
     content:
       currentStory?.content ||
       "<p></p>",
-    onUpdate: ({ editor }) => {
-      useStoryStore.getState().setCurrentStory({
-        ...useStoryStore.getState().currentStory,
-        content: editor.getHTML(),
-      });
+    onUpdate: () => {
       scheduleAutosave();
     },
   });
@@ -222,11 +228,20 @@ const Write = () => {
     clearTimeout(window._autoSaveTimer);
     window._autoSaveTimer = setTimeout(async () => {
       const latest = useStoryStore.getState().currentStory;
-      if (!latest?.id) return;
+      if (!latest?.id || !editor) return;
+
+      const freshContent = editor.getHTML();
+      const freshChapterTitle = chapterTitleRef.current;
+
+      useStoryStore.getState().updateCurrentStory({
+        content: freshContent,
+        chapterTitle: freshChapterTitle,
+      });
+
       try {
         await autosaveStoryInSupabase(latest.id, {
-          content: latest.content,
-          chapterTitle: chapterTitleRef.current,
+          content: freshContent,
+          chapterTitle: freshChapterTitle,
           wordCount: wordCountRef.current,
         });
       } catch (err) {
@@ -297,9 +312,14 @@ const Write = () => {
         setTotalPages(Math.max(1, Math.ceil(h / PAGE_HEIGHT_PX)));
       }
     };
-    editor.on("update", updatePages);
+    const debouncedUpdatePages = () => {
+      clearTimeout(window._updatePagesTimer);
+      window._updatePagesTimer = setTimeout(updatePages, 250);
+    };
+
+    editor.on("update", debouncedUpdatePages);
     updatePages();
-    return () => editor.off("update", updatePages);
+    return () => editor.off("update", debouncedUpdatePages);
   }, [editor]);
 
   // Tính trang hiện tại dựa theo vị trí scroll thực sự
@@ -506,8 +526,9 @@ const Write = () => {
           {/* Tiêu đề chương */}
           <div className="mb-8 pb-6 border-b border-stone-300" onClick={(e) => e.stopPropagation()}>
             <textarea
+              ref={chapterTitleTextareaRef}
               value={chapterTitle}
-              onChange={(e) => { titleEditedRef.current = true; setChapterTitle(e.target.value); useStoryStore.getState().updateCurrentStory({ chapterTitle: e.target.value }); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; scheduleAutosave(); }}
+              onChange={(e) => { setChapterTitle(e.target.value); scheduleAutosave(); }}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); editor?.chain().focus().run(); } }}
               rows={1}
               className="w-full bg-transparent text-center text-3xl font-bold text-stone-800 focus:outline-none placeholder-stone-400 resize-none overflow-hidden"

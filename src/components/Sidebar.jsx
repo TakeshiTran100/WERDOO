@@ -71,7 +71,7 @@ const Sidebar = () => {
           whileHover={{ scale: 1.05 }}
           className={`text-3xl font-bold ${theme.logo}`}
         >
-          {currentTheme === "hellokitty" ? "🎀 Story Room" : "✨ Story Room"}
+          {currentTheme === "hellokitty" ? "🎀 WERDOO" : "✨ WERDOO"}
         </motion.div>
         <p className={`text-sm mt-2 ${theme.logoSub}`}>
           Không gian sáng tác của bạn

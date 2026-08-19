@@ -178,7 +178,10 @@ const ShelfRow = ({
                       position: "relative",
                       zIndex: 30,
                     }}
-                    onClick={() => handleWriteStory(story)}
+                    onClick={(e) => {
+  e.stopPropagation();
+  handleWriteStory(story);
+}}
                   >
                     <svg
                       viewBox="0 0 160 212"
@@ -301,15 +304,14 @@ const ShelfRow = ({
 
 const Library = () => {
   const {
-    stories,
-    setStories,
-    setCurrentStory,
-setCurrentChapter,
-setCurrentTab,
-    addStory,
-    updateStory,
-    deleteStory,
-  } = useStoryStore();
+  stories,
+  setStories,
+  setCurrentStory,
+  setCurrentTab,
+  addStory,
+  updateStory,
+  deleteStory
+} = useStoryStore();
   const [search, setSearch] = React.useState("");
   const [selectedStoryIds, setSelectedStoryIds] = React.useState([]);
   const [selectionMode, setSelectionMode] = React.useState(false);
@@ -443,7 +445,7 @@ setCurrentTab,
     setCurrentStory(story);
 
     if (chapters.length > 0) {
-      setCurrentChapter(chapters[0]);
+      useStoryStore.getState().setCurrentChapter(chapters[0]);
     } else {
       setCurrentChapter(null);
     }
@@ -452,7 +454,7 @@ setCurrentTab,
   } catch (err) {
     console.error("Lỗi khi tải chapters:", err);
     setCurrentStory(story);
-    setCurrentChapter(null);
+    useStoryStore.getState().useStoryStore.getState().setCurrentChapter(null);
     setCurrentTab("write");
   }
 };
@@ -605,7 +607,8 @@ setCurrentTab,
         />
       </div>
 
-      {/* Shelves */}
+
+{/* Shelves */}
       <style>{`
   @keyframes slideInRight { from { opacity: 0; transform: translateX(48px); } to { opacity: 1; transform: translateX(0); } }
   @keyframes slideInLeft  { from { opacity: 0; transform: translateX(-48px); } to { opacity: 1; transform: translateX(0); } }

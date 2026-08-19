@@ -8,12 +8,14 @@ import logo2 from "../../assets/logo2.png";
 import { mockCharacters } from "../../data/mockData";
 import { supabase } from "../../lib/supabaseClient";
 import { createStory } from "../../services/storyService";
+import Cropper from "react-easy-crop";
 
 const Home = () => {
   const {
     setCurrentTab,
-    setCurrentStory,
-    stories,
+setCurrentStory,
+setStories,
+stories,
     moodboardCollections,
     workflows,
     worlds,
@@ -33,11 +35,67 @@ const Home = () => {
   const [hoveringBYC, setHoveringBYC] = React.useState(false);
   const [hoveringWF, setHoveringWF] = React.useState(false);
   const [newStory, setNewStory] = React.useState({
-    title: "",
-    description: "",
-    category: "",
-    coverImage: null,
+  title: "",
+  description: "",
+  category: "",
+  coverImage: null,
+});
+
+const [cropSrc, setCropSrc] = React.useState(null);
+const [crop, setCrop] = React.useState({ x: 0, y: 0 });
+const [zoom, setZoom] = React.useState(1);
+const [croppedAreaPixels, setCroppedAreaPixels] = React.useState(null);
+
+const onCropComplete = React.useCallback(
+  (_, pixels) => setCroppedAreaPixels(pixels),
+  [],
+);
+
+const createImage = (url) =>
+  new Promise((resolve, reject) => {
+    const img = new Image();
+    img.addEventListener("load", () => resolve(img));
+    img.addEventListener("error", reject);
+    img.src = url;
   });
+
+const getCroppedImg = async (src, crop) => {
+  const image = await createImage(src);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 160;
+  canvas.height = 212;
+
+  const ctx = canvas.getContext("2d");
+
+  const scaleX = image.naturalWidth / image.width;
+  const scaleY = image.naturalHeight / image.height;
+
+  ctx.drawImage(
+    image,
+    crop.x * scaleX,
+    crop.y * scaleY,
+    crop.width * scaleX,
+    crop.height * scaleY,
+    0,
+    0,
+    160,
+    212,
+  );
+
+  return canvas.toDataURL("image/jpeg", 0.92);
+};
+
+const handleConfirmCrop = async () => {
+  const cropped = await getCroppedImg(cropSrc, croppedAreaPixels);
+
+  setNewStory((prev) => ({
+    ...prev,
+    coverImage: cropped,
+  }));
+
+  setCropSrc(null);
+};
 
   const handleCreateStory = async () => {
     if (!newStory.title.trim()) {
@@ -64,7 +122,8 @@ const Home = () => {
         chapters: 0,
       });
 
-      setCurrentStory(created);
+      setStories([...stories, created]);
+setCurrentStory(created);
       setShowCreateDialog(false);
       setCurrentTab("write");
     } catch (err) {
@@ -74,13 +133,19 @@ const Home = () => {
   };
 
   const handleCoverImage = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) =>
-      setNewStory({ ...newStory, coverImage: ev.target.result });
-    reader.readAsDataURL(file);
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = (ev) => {
+    setCropSrc(ev.target.result);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
   };
+
+  reader.readAsDataURL(file);
+};
 
   const folders = [
     {
@@ -581,6 +646,53 @@ const Home = () => {
               </button>
             </div>
           </motion.div>
+        </div>
+      )}
+            {cropSrc && (
+        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-6 w-[400px]">
+            <h3 className="text-lg font-bold mb-4">
+              Căn chỉnh bìa sách
+            </h3>
+
+            <div className="relative w-full h-[280px] bg-black rounded-lg overflow-hidden">
+              <Cropper
+                image={cropSrc}
+                crop={crop}
+                zoom={zoom}
+                aspect={160 / 212}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+              />
+            </div>
+
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.05}
+              value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              className="w-full mt-4"
+            />
+
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setCropSrc(null)}
+                className="flex-1 py-2 rounded-lg bg-gray-200"
+              >
+                Hủy
+              </button>
+
+              <button
+                onClick={handleConfirmCrop}
+                className="flex-1 py-2 rounded-lg bg-[#DD7E83] text-white"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

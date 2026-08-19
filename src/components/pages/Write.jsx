@@ -24,6 +24,7 @@ import {
   getChapters,
   createChapter,
   updateChapter,
+  deleteChapter,
 } from "../../services/storyService";
 import {
   Bold,
@@ -144,18 +145,16 @@ const Write = () => {
     status: "ongoing",
   });
 
-  const activeContent =
-  currentChapter?.content || currentStory?.content || "";
+  const activeContent = currentChapter?.content || currentStory?.content || "";
 
-const activeChapterTitle =
-  currentChapter?.title || currentStory?.chapterTitle || "";
+  const activeChapterTitle =
+    currentChapter?.title || currentStory?.chapterTitle || "";
 
-const [chapterTitle, setChapterTitle] =
-  React.useState(activeChapterTitle);
+  const [chapterTitle, setChapterTitle] = React.useState(activeChapterTitle);
 
-const chapterTitleRef = React.useRef(chapterTitle);
-const chapterTitleTextareaRef = React.useRef(null);
-const titleEditedRef = React.useRef(false);
+  const chapterTitleRef = React.useRef(chapterTitle);
+  const chapterTitleTextareaRef = React.useRef(null);
+  const titleEditedRef = React.useRef(false);
 
   const [showMoodboard, setShowMoodboard] = React.useState(false);
   const [showNotesSidebar, setShowNotesSidebar] = React.useState(false);
@@ -183,7 +182,7 @@ const titleEditedRef = React.useRef(false);
       currentStory?.chapterTitle !== undefined &&
       currentStory.chapterTitle !== chapterTitle
     ) {
-      setChapterTitle(currentStory.chapterTitle);
+      setChapterTitle(currentStory.chapterTitle || "");
     }
   }, [currentStory?.chapterTitle]);
   const [chapSaveData, setChapSaveData] = React.useState({
@@ -207,23 +206,56 @@ const titleEditedRef = React.useRef(false);
   }, [notes]);
 
   React.useEffect(() => {
-    if (!currentStory?.id) {
-      setChapters([]);
-      return;
-    }
+  if (!currentStory?.id) {
+    setChapters([]);
+    return;
+  }
 
-    const loadChapters = async () => {
-      try {
-        const data = await getChapters(currentStory.id);
-        setChapters((data || []).sort((a, b) => a.order_index - b.order_index));
-      } catch (err) {
-        console.error("Lỗi khi tải chapters:", err);
-        setChapters([]);
+  const loadChapters = async () => {
+    try {
+      const data = await getChapters(currentStory.id);
+      const loadedChapters = data || [];
+
+      // Nếu truyện chưa có chapter nào thì tạo chapter đầu tiên
+      if (loadedChapters.length === 0) {
+        const newChapter = await createChapter(
+  currentStory.id,
+  {
+    title: "",
+            content: "",
+            wordCount: 0,
+            orderIndex: 1,
+            status: "ongoing",
+          }
+        );
+
+        setChapters([newChapter]);
+        setCurrentChapter(newChapter);
+        setChapterTitle("");
+        chapterTitleRef.current = "";
+        titleEditedRef.current = false;
+
+               return;
       }
-    };
 
-    loadChapters();
-  }, [currentStory?.id]);
+      loadedChapters.sort(
+        (a, b) => (a.orderIndex || 0) - (b.orderIndex || 0)
+      );
+
+      setChapters(loadedChapters);
+
+      // Nếu chưa có chapter hiện tại thì chọn chapter đầu tiên
+      if (!useStoryStore.getState().currentChapter?.id) {
+        setCurrentChapter(loadedChapters[0]);
+      }
+    } catch (err) {
+      console.error("Lỗi khi tải chapters:", err);
+      setChapters([]);
+    }
+  };
+
+  loadChapters();
+}, [currentStory?.id]);
 
   const editor = useEditor({
     extensions: [
@@ -244,10 +276,119 @@ const titleEditedRef = React.useRef(false);
       Image,
     ],
     content: activeContent || "<p></p>",
-    onUpdate: () => {
+    onUpdate: ({ editor }) => {
+      const { from } = editor.state.selection;
+
+      if (from > 1) {
+        const textBefore = editor.state.doc.textBetween(
+          Math.max(0, from - 2),
+          from,
+          " ",
+        );
+
+        if (/[.!?]\s$/.test(textBefore)) {
+          const nextChar = editor.state.doc.textBetween(from, from + 1, "");
+
+          if (nextChar && /[a-zà-ỹ]/.test(nextChar)) {
+            editor
+              .chain()
+              .command(({ tr }) => {
+                tr.insertText(nextChar.toUpperCase(), from, from + 1);
+                return true;
+              })
+              .run();
+          }
+        }
+      }
+
       scheduleAutosave();
     },
+   editorProps: {
+  handleKeyDown: (view, event) => {
+    if (event.key === "Tab") {
+      event.preventDefault();
+
+      const { state, dispatch } = view;
+      const { selection } = state;
+
+      const tr = state.tr.insertText(
+        "    ",
+        selection.from,
+        selection.to
+      );
+
+      dispatch(tr);
+
+      return true;
+    }
+
+    return false;
+  },
+
+  handleTextInput: (view, from, to, text) => {
+    if (!text || text.length !== 1) return false;
+
+    const { state } = view;
+    const $from = state.doc.resolve(from);
+    const paragraphStart = $from.start();
+
+    const textBefore = state.doc.textBetween(
+      paragraphStart,
+      from,
+      ""
+    );
+
+    // Đầu dòng
+    if (
+      textBefore.trim() === "" &&
+      /[a-zà-ỹ]/.test(text)
+    ) {
+      view.dispatch(
+        state.tr.insertText(
+          text.toUpperCase(),
+          from,
+          to
+        )
+      );
+
+      return true;
+    }
+
+    // Sau dấu . ! ?
+    const beforeCursor = state.doc.textBetween(
+      Math.max(paragraphStart, from - 2),
+      from,
+      ""
+    );
+
+    if (
+      /[.!?]\s$/.test(beforeCursor) &&
+      /[a-zà-ỹ]/.test(text)
+    ) {
+      view.dispatch(
+        state.tr.insertText(
+          text.toUpperCase(),
+          from,
+          to
+        )
+      );
+
+      return true;
+    }
+
+    return false;
+  },
+},
   });
+
+  React.useEffect(() => {
+    if (!editor || !currentChapter) return;
+
+    editor.commands.setContent(currentChapter.content || "<p></p>");
+    setChapterTitle(currentChapter.title || "");
+    chapterTitleRef.current = currentChapter.title || "";
+    setWordCount(currentChapter.wordCount || 0);
+  }, [editor, currentChapter?.id]);
 
   const [wordCount, setWordCount] = React.useState(0);
   const wordCountRef = React.useRef(0);
@@ -290,18 +431,18 @@ const titleEditedRef = React.useRef(false);
         title: freshChapterTitle,
         wordCount: wordCountRef.current,
       });
-setChapters((prev) =>
-  prev.map((chapter) =>
-    chapter.id === latestChapter.id
-      ? {
-          ...chapter,
-          content: freshContent,
-          title: freshChapterTitle,
-          wordCount: wordCountRef.current,
-        }
-      : chapter
-  )
-);
+      setChapters((prev) =>
+        prev.map((chapter) =>
+          chapter.id === latestChapter.id
+            ? {
+                ...chapter,
+                content: freshContent,
+                title: freshChapterTitle,
+                wordCount: wordCountRef.current,
+              }
+            : chapter,
+        ),
+      );
       try {
         await updateChapter(latestChapter.id, {
           content: freshContent,
@@ -319,20 +460,52 @@ setChapters((prev) =>
   };
 
   const handleSelectChapter = (chapter) => {
-  clearTimeout(window._autoSaveTimer);
+    clearTimeout(window._autoSaveTimer);
 
-  setCurrentChapter(chapter);
+    setCurrentChapter(chapter);
 
-  if (editor) {
-    editor.commands.setContent(chapter.content || "<p></p>");
-  }
+    if (editor) {
+      editor.commands.setContent(chapter.content || "<p></p>");
+    }
 
-  setChapterTitle(chapter.title || "");
-  chapterTitleRef.current = chapter.title || "";
-  titleEditedRef.current = false;
+    setChapterTitle(chapter.title || "");
+    chapterTitleRef.current = chapter.title || "";
+    titleEditedRef.current = false;
 
-  setWordCount(chapter.wordCount || 0);
-};
+    setWordCount(chapter.wordCount || 0);
+  };
+
+  const handleDeleteChapter = async (chapter, e) => {
+    e.stopPropagation();
+
+    if (chapters.length <= 1) {
+      alert("Không thể xóa chapter cuối cùng.");
+      return;
+    }
+
+    if (!window.confirm(`Xóa "${chapter.title || "Phần mới"}"?`)) return;
+
+    try {
+      clearTimeout(window._autoSaveTimer);
+
+      await deleteChapter(chapter.id);
+
+      const remaining = chapters.filter((c) => c.id !== chapter.id);
+      setChapters(remaining);
+
+      if (currentChapter?.id === chapter.id) {
+        const nextChapter = remaining[remaining.length - 1];
+
+        setCurrentChapter(nextChapter);
+        editor?.commands.setContent(nextChapter.content || "<p></p>");
+        setChapterTitle(nextChapter.title || "");
+      }
+    } catch (err) {
+      console.error("Lỗi khi xóa chapter:", err);
+      alert("Xóa chapter thất bại.");
+    }
+  };
+
   const handleSaveStory = async () => {
     if (!currentStory?.id || !currentChapter?.id) return;
 
@@ -341,7 +514,7 @@ setChapters((prev) =>
 
     try {
       const freshContent = editor.getHTML();
-      const freshTitle = chapterTitle.trim() || "Phần mới";
+      const freshTitle = chapterTitle.trim();
       const freshWordCount = wordCount;
 
       const updated = await updateChapter(currentChapter.id, {
@@ -357,27 +530,27 @@ setChapters((prev) =>
       });
 
       const newChapter = await createChapter(
-    currentStory.id,
-    {
-        title: "Phần mới",
-        content: "",
-        wordCount: 0,
-        orderIndex: chapters.length + 1,
-        status: "ongoing",
-    },
+  currentStory.id,
+  {
+    title: "",
+    content: "",
+    wordCount: 0,
+    orderIndex: chapters.length + 1,
+    status: "ongoing",
+  }
 );
 
       setCurrentChapter(newChapter);
-setChapterTitle(newChapter.title);
-chapterTitleRef.current = newChapter.title;
+      setChapterTitle(newChapter.title);
+      chapterTitleRef.current = newChapter.title;
 
-if (editor) {
-  editor.commands.setContent("<p></p>");
-}
+      if (editor) {
+        editor.commands.setContent("<p></p>");
+      }
 
-setWordCount(0);
+      setWordCount(0);
 
-setChapters((prev) => [...prev, newChapter]);
+      setChapters((prev) => [...prev, newChapter]);
 
       setShowSaveDialog(false);
       setChapSaveData({ title: "", status: "ongoing" });
@@ -403,10 +576,12 @@ setChapters((prev) => [...prev, newChapter]);
       handleSaveStory();
     };
 
+    
     window.addEventListener("keydown", handleKeyDown);
 
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isSaving]);
+  
 
   const addHeading = (level) => {
     editor.chain().focus().toggleHeading({ level }).run();
@@ -509,8 +684,15 @@ setChapters((prev) => [...prev, newChapter]);
           className="fixed top-0 left-64 right-0 bg-[#2d2520] border-b border-[#4a3f35] px-4 py-2 z-40"
         >
           <div className="flex items-center justify-between">
-            {/* Góc trái: ảnh bìa + tên truyện + tên chương */}
-            <div className="flex items-center gap-3">
+           {/* Góc trái: quay lại + ảnh bìa + tên truyện */}
+<div className="flex items-center gap-3">
+  <button
+    onClick={() => setCurrentTab("library")}
+    className="px-2 py-1 rounded-lg text-stone-300 hover:bg-white/10 hover:text-white transition-all text-sm"
+    title="Quay về thư viện"
+  >
+    ← Thư viện
+  </button>
               {currentStory?.coverImage && (
                 <img
                   src={currentStory.coverImage}
@@ -530,7 +712,7 @@ setChapters((prev) => [...prev, newChapter]);
             {/* Góc phải: Ghi chú + Lưu */}
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setShowNotesSidebar(!showNotesSidebar)}
+                onClick={() => alert("Tính năng Ghi chú sẽ có trong tương lai.")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-yellow-400 hover:bg-yellow-400/10 ${showNotesSidebar ? "bg-yellow-400/20" : ""}`}
               >
                 <Lightbulb size={16} />
@@ -755,25 +937,56 @@ setChapters((prev) => [...prev, newChapter]);
             }}
           >
             {chapters.map((chapter, index) => (
-              <button
+              <div
                 key={chapter.id}
-                onClick={() => handleSelectChapter(chapter)}
                 style={{
+                  position: "relative",
                   flexShrink: 0,
-                  padding: "6px 14px",
-                  borderRadius: 8,
-                  border: "none",
-                  cursor: "pointer",
-                  fontFamily: "'Be Vietnam Pro', sans-serif",
-                  fontSize: 12,
-                  fontWeight: currentChapter?.id === chapter.id ? 700 : 500,
-                  color: currentChapter?.id === chapter.id ? "#fff" : "#9b2335",
-                  background:
-                    currentChapter?.id === chapter.id ? "#9b2335" : "#f3dddd",
                 }}
               >
-                {chapter.title || `Phần ${index + 1}`}
-              </button>
+                <button
+                  onClick={() => handleSelectChapter(chapter)}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: 8,
+                    border: "none",
+                    cursor: "pointer",
+                    fontFamily: "'Be Vietnam Pro', sans-serif",
+                    fontSize: 12,
+                    fontWeight: currentChapter?.id === chapter.id ? 700 : 500,
+                    color:
+                      currentChapter?.id === chapter.id ? "#fff" : "#9b2335",
+                    background:
+                      currentChapter?.id === chapter.id ? "#9b2335" : "#f5dfdf",
+                  }}
+                >
+                  {chapter.title || `Phần ${index + 1}`}
+                </button>
+
+                <button
+                  onClick={(e) => handleDeleteChapter(chapter, e)}
+                  title="Xóa chapter"
+                  style={{
+                    position: "absolute",
+                    top: -6,
+                    right: -6,
+                    width: 16,
+                    height: 16,
+                    padding: 0,
+                    border: "1px solid white",
+                    borderRadius: "50%",
+                    background: "#9b2335",
+                    color: "white",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    zIndex: 10,
+                  }}
+                >
+                  <X size={9} />
+                </button>
+              </div>
             ))}
           </div>
 

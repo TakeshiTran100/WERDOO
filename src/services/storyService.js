@@ -215,7 +215,7 @@ export async function createChapter(storyId, chapter = {}) {
         .insert({
             story_id: storyId,
             user_id: user.id,
-            title: chapter.title || 'Phần mới',
+            title: chapter.title || '',
             content: chapter.content || '',
             status: chapter.status || 'ongoing',
             word_count: chapter.wordCount || 0,
@@ -280,3 +280,16 @@ export async function deleteChapterInSupabase(chapterId) {
 
     return true;
 }
+
+export const deleteChapter = async (chapterId) => {
+  const { error } = await supabase
+    .from("chapters")
+    .delete()
+    .eq("id", chapterId);
+
+  if (error) {
+    throw error;
+  }
+
+  return true;
+};

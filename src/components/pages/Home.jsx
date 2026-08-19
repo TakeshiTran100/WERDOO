@@ -1,7 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useStoryStore } from "../../store";
-import btnSOS from "../../assets/1 - button SOS.png";
+import btnSOS from "../../assets/1 - Button SOS.png";
 import btnBYC from "../../assets/2 - Button BYC.png";
 import btnWF from "../../assets/3- Button WF.png";
 import logo2 from "../../assets/logo2.png";

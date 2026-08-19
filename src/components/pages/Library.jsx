@@ -25,20 +25,13 @@ import bookImg from '../../assets/Book_1.png';
 import editIcon from '../../assets/edit icon.png';
 import coverSlot from '../../assets/them hinh sach vao day.png';
 
-const ShelfRow = ({ label, storyList, hoveredBook, setHoveredBook, handleWriteStory, handleOpenEdit, onExpandAll }) => {
+const ShelfRow = ({ label, storyList, hoveredBook, setHoveredBook, handleWriteStory, handleOpenEdit }) => {
   const [tooltipData, setTooltipData] = React.useState(null); // { x, y, story }
   const SHELF_LIMIT = 6;
   const [expanded, setExpanded] = React.useState(false);
   const overflow = Math.max(0, storyList.length - SHELF_LIMIT);
   const visibleBooks = expanded ? storyList : storyList.slice(0, SHELF_LIMIT);
   const scrollRef = React.useRef(null);
-  React.useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const handler = (e) => e.preventDefault();
-    el.addEventListener('wheel', handler, { passive: false });
-    return () => el.removeEventListener('wheel', handler);
-  }, []);
 
   return (
     <div className="mb-10" style={{ marginTop: 'px', overflow: 'visible' }}>
@@ -47,13 +40,7 @@ const ShelfRow = ({ label, storyList, hoveredBook, setHoveredBook, handleWriteSt
         {(overflow > 0 || expanded) && (
           <span
             onMouseDown={e => e.stopPropagation()}
-            onClick={() => {
-              if (overflow > 0 && onExpandAll) {
-                onExpandAll();
-              } else {
-                setExpanded(v => !v);
-              }
-            }}
+            onClick={() => setExpanded(v => !v)}
             style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 600, fontSize: 13, color: '#DD7E83', opacity: 0.6, cursor: 'pointer', letterSpacing: 0.3, borderBottom: '1px solid transparent', transition: 'opacity 0.2s, border-color 0.2s', userSelect: 'none', zIndex: 50, position: 'relative' }}
             onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.borderBottomColor = '#DD7E83'; }}
             onMouseLeave={e => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.borderBottomColor = 'transparent'; }}>
@@ -68,7 +55,7 @@ const ShelfRow = ({ label, storyList, hoveredBook, setHoveredBook, handleWriteSt
           style={{
             gap: 'clamp(42px, 4vw, 40px)',
             overflowX: 'hidden',
-            overflowY: 'visible',
+            overflowY: 'hidden',
             position: 'relative',
             zIndex: 20,
             paddingLeft: 160,
@@ -150,7 +137,6 @@ const ShelfRow = ({ label, storyList, hoveredBook, setHoveredBook, handleWriteSt
 
 const Library = () => {
   const { stories, setStories, setCurrentStory, setCurrentTab, addStory, updateStory, deleteStory } = useStoryStore();
-  const [libraryView, setLibraryView] = React.useState(false);
   const [search, setSearch] = React.useState('');
   const [showCreateModal, setShowCreateModal] = React.useState(false);
   const [newStoryData, setNewStoryData] = React.useState({ title: '', description: '', category: '' });
@@ -247,7 +233,7 @@ const Library = () => {
   return (
     <div className="min-h-screen p-8 pt-6" style={{ background: 'linear-gradient(160deg, #fdf6f0 0%, #f5ece4 60%, #ede0d8 100%)' }}>
       {/* Top bar */}
-      <div className="flex items-center gap-4 mb-10" style={{ display: libraryView ? 'none' : 'flex' }}>
+      <div className="flex items-center gap-4 mb-10" style={{ display: 'flex' }}>
         <div className="relative flex-1">
           <img src={searchBar} alt="search" className="w-full" style={{ maxHeight: 56 }} />
           <input
@@ -275,32 +261,19 @@ const Library = () => {
   .anim-slide-left  { animation: slideInLeft  0.38s cubic-bezier(0.22,1,0.36,1) forwards; }
 
 `}</style>
-      {!libraryView ? (
-        <div className="mt-40 anim-slide-left">
-          <ShelfRow label="Đang Viết" storyList={ongoingStories} hoveredBook={hoveredBook} setHoveredBook={setHoveredBook} handleWriteStory={handleWriteStory} handleOpenEdit={handleOpenEdit} onExpandAll={() => setCurrentTab('libraryFull')} />
-        </div>
-      ) : (
-        <div className="mt-6 anim-slide-right">
-          <button
-            onClick={() => setLibraryView(false)}
-            style={{ marginBottom: 28, display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#DD7E83', fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: 0.5 }}
-            onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
-            onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
-            ← Quay lại
-          </button>
-          {Array.from({ length: Math.ceil(stories.length / 7) }, (_, i) => (
-            <ShelfRow
-              key={i}
-              label={i === 0 ? 'Tất Cả Truyện' : ''}
-              storyList={stories.slice(i * 7, i * 7 + 7)}
-              hoveredBook={hoveredBook}
-              setHoveredBook={setHoveredBook}
-              handleWriteStory={handleWriteStory}
-              handleOpenEdit={handleOpenEdit}
-            />
-          ))}
-        </div>
-      )}
+      <div className="mt-40 anim-slide-left">
+        {Array.from({ length: Math.ceil(stories.length / 6) }, (_, i) => (
+          <ShelfRow
+            key={i}
+            label={i === 0 ? 'Thư Viện' : ''}
+            storyList={stories.slice(i * 6, i * 6 + 6)}
+            hoveredBook={hoveredBook}
+            setHoveredBook={setHoveredBook}
+            handleWriteStory={handleWriteStory}
+            handleOpenEdit={handleOpenEdit}
+          />
+        ))}
+      </div>
 
       {/* Create Modal */}
       {showCreateModal && (

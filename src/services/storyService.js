@@ -154,6 +154,24 @@ export async function autosaveStoryInSupabase(storyId, draft) {
         updated_at: new Date().toISOString(),
     };
 
+    const { data, error } = await supabase
+        .from('stories')
+        .update(payload)
+        .eq('id', storyId)
+        .select()
+        .single();
+
+    if (error) throw error;
+
+    return {
+        id: data.id,
+        content: data.content,
+        chapterTitle: data.chapter_title,
+        wordCount: data.word_count,
+        updatedAt: data.updated_at,
+    };
+}
+
 export async function getChapters(storyId) {
     const { data, error } = await supabase
         .from('chapters')
@@ -163,26 +181,40 @@ export async function getChapters(storyId) {
 
     if (error) throw error;
 
-    return data.map((row) => ({
-        id: row.id,
-        storyId: row.story_id,
-        userId: row.user_id,
-        title: row.title,
-        content: row.content || '',
-        status: row.status,
-        wordCount: row.word_count || 0,
-        orderIndex: row.order_index,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-    }));
+   return data.map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    title: row.title,
+    description: row.description,
+    category: row.category,
+    status: row.status,
+    coverImage: row.cover_image,
+    content: row.content,
+    chapterTitle: row.chapter_title,
+    wordCount: row.word_count,
+    chapters: row.chapters,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+}));
 }
 
-export async function createChapter(userId, storyId, chapter = {}) {
+export async function createChapter(storyId, chapter = {}) {
+    const {
+        data: { user },
+        error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError) throw authError;
+
+    if (!user) {
+        throw new Error('Chưa đăng nhập.');
+    }
+
     const { data, error } = await supabase
         .from('chapters')
         .insert({
             story_id: storyId,
-            user_id: userId,
+            user_id: user.id,
             title: chapter.title || 'Phần mới',
             content: chapter.content || '',
             status: chapter.status || 'ongoing',
@@ -208,18 +240,16 @@ export async function createChapter(userId, storyId, chapter = {}) {
     };
 }
 
-export async function updateChapterInSupabase(chapterId, updates) {
-    const payload = {
-        title: updates.title,
-        content: updates.content,
-        status: updates.status,
-        word_count: updates.wordCount,
-        updated_at: new Date().toISOString(),
-    };
-
+export async function updateChapter(chapterId, updates) {
     const { data, error } = await supabase
         .from('chapters')
-        .update(payload)
+        .update({
+            title: updates.title,
+            content: updates.content,
+            word_count: updates.wordCount,
+            status: updates.status,
+            updated_at: new Date().toISOString(),
+        })
         .eq('id', chapterId)
         .select()
         .single();
@@ -249,73 +279,4 @@ export async function deleteChapterInSupabase(chapterId) {
     if (error) throw error;
 
     return true;
-}
-
-    const { data, error } = await supabase
-        .from('stories')
-        .update(payload)
-        .eq('id', storyId)
-        .select()
-        .single();
-
-    if (error) throw error;
-
-    return {
-        id: data.id,
-        content: data.content,
-        chapterTitle: data.chapter_title,
-        wordCount: data.word_count,
-        updatedAt: data.updated_at,
-    };
-}
-
-export async function getChapters(storyId) {
-    const { data, error } = await supabase
-        .from('chapters')
-        .select('*')
-        .eq('story_id', storyId)
-        .order('order_index', { ascending: true });
-
-    if (error) throw error;
-
-    return data;
-}
-
-export async function createChapter(storyId, userId, chapter) {
-    const { data, error } = await supabase
-        .from('chapters')
-        .insert({
-            story_id: storyId,
-            user_id: userId,
-            title: chapter.title,
-            content: chapter.content || '',
-            word_count: chapter.wordCount || 0,
-            order_index: chapter.orderIndex || 0,
-            status: chapter.status || 'ongoing',
-        })
-        .select()
-        .single();
-
-    if (error) throw error;
-
-    return data;
-}
-
-export async function updateChapter(chapterId, updates) {
-    const { data, error } = await supabase
-        .from('chapters')
-        .update({
-            title: updates.title,
-            content: updates.content,
-            word_count: updates.wordCount,
-            status: updates.status,
-            updated_at: new Date().toISOString(),
-        })
-        .eq('id', chapterId)
-        .select()
-        .single();
-
-    if (error) throw error;
-
-    return data;
 }

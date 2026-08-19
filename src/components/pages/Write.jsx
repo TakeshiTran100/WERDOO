@@ -20,6 +20,8 @@ import { motion } from "framer-motion";
 import { useStoryStore } from "../../store";
 import {
   updateStoryInSupabase,
+  autosaveStoryInSupabase,
+  getChapters,
   createChapter,
   updateChapter,
 } from "../../services/storyService";
@@ -133,6 +135,7 @@ const Write = () => {
   } = useStoryStore();
   const [showSaveDialog, setShowSaveDialog] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [chapters, setChapters] = React.useState([]);
   const [autosaveStatus, setAutosaveStatus] = React.useState("idle");
   const [lastSavedAt, setLastSavedAt] = React.useState(null);
   const [saveData, setSaveData] = React.useState({
@@ -140,6 +143,20 @@ const Write = () => {
     category: "",
     status: "ongoing",
   });
+
+  const activeContent =
+  currentChapter?.content || currentStory?.content || "";
+
+const activeChapterTitle =
+  currentChapter?.title || currentStory?.chapterTitle || "";
+
+const [chapterTitle, setChapterTitle] =
+  React.useState(activeChapterTitle);
+
+const chapterTitleRef = React.useRef(chapterTitle);
+const chapterTitleTextareaRef = React.useRef(null);
+const titleEditedRef = React.useRef(false);
+
   const [showMoodboard, setShowMoodboard] = React.useState(false);
   const [showNotesSidebar, setShowNotesSidebar] = React.useState(false);
   const [bubbleMenu, setBubbleMenu] = React.useState({
@@ -147,10 +164,6 @@ const Write = () => {
     x: 0,
     y: 0,
   });
-  const [chapterTitle, setChapterTitle] = React.useState(activeChapterTitle);
-  const chapterTitleRef = React.useRef(chapterTitle);
-  const chapterTitleTextareaRef = React.useRef(null);
-  const titleEditedRef = React.useRef(false);
 
   React.useEffect(() => {
     chapterTitleRef.current = chapterTitle;
@@ -193,9 +206,24 @@ const Write = () => {
     if (notes) setSidebarNotes(notes);
   }, [notes]);
 
-  const activeContent = currentChapter?.content || currentStory?.content || "";
-  const activeChapterTitle =
-    currentChapter?.title || currentStory?.chapterTitle || "";
+  React.useEffect(() => {
+    if (!currentStory?.id) {
+      setChapters([]);
+      return;
+    }
+
+    const loadChapters = async () => {
+      try {
+        const data = await getChapters(currentStory.id);
+        setChapters((data || []).sort((a, b) => a.order_index - b.order_index));
+      } catch (err) {
+        console.error("Lỗi khi tải chapters:", err);
+        setChapters([]);
+      }
+    };
+
+    loadChapters();
+  }, [currentStory?.id]);
 
   const editor = useEditor({
     extensions: [
@@ -262,7 +290,18 @@ const Write = () => {
         title: freshChapterTitle,
         wordCount: wordCountRef.current,
       });
-
+setChapters((prev) =>
+  prev.map((chapter) =>
+    chapter.id === latestChapter.id
+      ? {
+          ...chapter,
+          content: freshContent,
+          title: freshChapterTitle,
+          wordCount: wordCountRef.current,
+        }
+      : chapter
+  )
+);
       try {
         await updateChapter(latestChapter.id, {
           content: freshContent,
@@ -279,6 +318,21 @@ const Write = () => {
     }, 1000);
   };
 
+  const handleSelectChapter = (chapter) => {
+  clearTimeout(window._autoSaveTimer);
+
+  setCurrentChapter(chapter);
+
+  if (editor) {
+    editor.commands.setContent(chapter.content || "<p></p>");
+  }
+
+  setChapterTitle(chapter.title || "");
+  chapterTitleRef.current = chapter.title || "";
+  titleEditedRef.current = false;
+
+  setWordCount(chapter.wordCount || 0);
+};
   const handleSaveStory = async () => {
     if (!currentStory?.id || !currentChapter?.id) return;
 
@@ -303,18 +357,27 @@ const Write = () => {
       });
 
       const newChapter = await createChapter(
-        currentStory.id,
-        currentStory.user_id,
-        {
-          title: "Phần mới",
-          content: "",
-          wordCount: 0,
-          orderIndex: 1,
-          status: "ongoing",
-        },
-      );
+    currentStory.id,
+    {
+        title: "Phần mới",
+        content: "",
+        wordCount: 0,
+        orderIndex: chapters.length + 1,
+        status: "ongoing",
+    },
+);
 
       setCurrentChapter(newChapter);
+setChapterTitle(newChapter.title);
+chapterTitleRef.current = newChapter.title;
+
+if (editor) {
+  editor.commands.setContent("<p></p>");
+}
+
+setWordCount(0);
+
+setChapters((prev) => [...prev, newChapter]);
 
       setShowSaveDialog(false);
       setChapSaveData({ title: "", status: "ongoing" });
@@ -680,6 +743,39 @@ const Write = () => {
                 </BubbleMenu>
               );
             })()}
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 12,
+              overflowX: "auto",
+              padding: "6px 0",
+            }}
+          >
+            {chapters.map((chapter, index) => (
+              <button
+                key={chapter.id}
+                onClick={() => handleSelectChapter(chapter)}
+                style={{
+                  flexShrink: 0,
+                  padding: "6px 14px",
+                  borderRadius: 8,
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "'Be Vietnam Pro', sans-serif",
+                  fontSize: 12,
+                  fontWeight: currentChapter?.id === chapter.id ? 700 : 500,
+                  color: currentChapter?.id === chapter.id ? "#fff" : "#9b2335",
+                  background:
+                    currentChapter?.id === chapter.id ? "#9b2335" : "#f3dddd",
+                }}
+              >
+                {chapter.title || `Phần ${index + 1}`}
+              </button>
+            ))}
+          </div>
 
           <EditorContent
             editor={editor}

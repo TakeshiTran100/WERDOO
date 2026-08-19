@@ -6,7 +6,7 @@ import { createStory, updateStoryMetadataInSupabase, deleteStoryInSupabase } fro
 import { X } from 'lucide-react';
 import searchBar from '../../assets/Thanh Search.png';
 import Cropper from 'react-easy-crop';
-import Sortable from 'sortablejs';
+
 
 const createImage = (url) => new Promise((resolve, reject) => { const img = new Image(); img.addEventListener('load', () => resolve(img)); img.addEventListener('error', reject); img.src = url; });
 const getCroppedImg = async (src, crop) => {
@@ -25,17 +25,13 @@ import bookImg from '../../assets/Book_1.png';
 import editIcon from '../../assets/edit icon.png';
 import coverSlot from '../../assets/them hinh sach vao day.png';
 
-const ShelfRow = ({ label, storyList, hoveredBook, setHoveredBook, handleWriteStory, handleOpenEdit, onExpandAll, paddingLeft = 1 }) => {
+const ShelfRow = ({ label, storyList, hoveredBook, setHoveredBook, handleWriteStory, handleOpenEdit, onExpandAll }) => {
   const [tooltipData, setTooltipData] = React.useState(null); // { x, y, story }
   const SHELF_LIMIT = 6;
   const [expanded, setExpanded] = React.useState(false);
   const overflow = Math.max(0, storyList.length - SHELF_LIMIT);
   const visibleBooks = expanded ? storyList : storyList.slice(0, SHELF_LIMIT);
   const scrollRef = React.useRef(null);
-  const [isDragging, setIsDragging] = React.useState(false);
-  const dragStart = React.useRef({ x: 0, scrollLeft: 0 });
-  const [draggedId, setDraggedId] = React.useState(null);
-  const [dragOverId, setDragOverId] = React.useState(null);
   React.useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -43,27 +39,6 @@ const ShelfRow = ({ label, storyList, hoveredBook, setHoveredBook, handleWriteSt
     el.addEventListener('wheel', handler, { passive: false });
     return () => el.removeEventListener('wheel', handler);
   }, []);
-
-  const onMouseDown = (e) => { const el = scrollRef.current; if (!el) return; setIsDragging(true); dragStart.current = { x: e.pageX, scrollLeft: el.scrollLeft }; el.style.cursor = 'grabbing'; };
-  const onMouseMove = (e) => { if (!isDragging) return; const el = scrollRef.current; if (!el) return; el.scrollLeft = dragStart.current.scrollLeft - (e.pageX - dragStart.current.x); };
-  const onMouseUp = () => { setIsDragging(false); if (scrollRef.current) scrollRef.current.style.cursor = 'grab'; };
-  React.useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const sortable = Sortable.create(el, {
-      animation: 150,
-      ghostClass: 'sortable-ghost',
-      chosenClass: 'sortable-chosen',
-      dragClass: 'sortable-drag',
-      onEnd: (evt) => {
-        const arr = [...storyList];
-        const [moved] = arr.splice(evt.oldIndex, 1);
-        arr.splice(evt.newIndex, 0, moved);
-        useStoryStore.getState().setStories(arr);
-      },
-    });
-    return () => sortable.destroy();
-  }, [storyList]);
 
   return (
     <div className="mb-10" style={{ marginTop: 'px', overflow: 'visible' }}>
@@ -105,7 +80,7 @@ const ShelfRow = ({ label, storyList, hoveredBook, setHoveredBook, handleWriteSt
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
           }}
-          onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
+
         >
           {storyList.length === 0 ? (
             <div className="flex items-center justify-center w-full h-32" style={{ color: '#DD7E83', fontFamily: "'Be Vietnam Pro', sans-serif" }}>Chưa có truyện nào</div>
@@ -226,7 +201,6 @@ const Library = () => {
   };
 
   const ongoingStories = stories.filter(s => s.status === 'ongoing');
-  const draftStories = stories.filter(s => s.status === 'draft');
 
   const handleWriteStory = (story) => {
     setCurrentStory(story);
@@ -299,9 +273,7 @@ const Library = () => {
   @keyframes slideInLeft  { from { opacity: 0; transform: translateX(-48px); } to { opacity: 1; transform: translateX(0); } }
   .anim-slide-right { animation: slideInRight 0.38s cubic-bezier(0.22,1,0.36,1) forwards; }
   .anim-slide-left  { animation: slideInLeft  0.38s cubic-bezier(0.22,1,0.36,1) forwards; }
-  .sortable-ghost { opacity: 0.3 !important; }
-  .sortable-chosen { cursor: grabbing !important; }
-  .sortable-drag { opacity: 0.9 !important; filter: drop-shadow(0 8px 24px rgba(100,40,40,0.25)); }
+
 `}</style>
       {!libraryView ? (
         <div className="mt-40 anim-slide-left">

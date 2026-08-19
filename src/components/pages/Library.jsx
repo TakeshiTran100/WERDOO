@@ -6,6 +6,7 @@ import {
   createStory,
   updateStoryMetadataInSupabase,
   deleteStoryInSupabase,
+  getChapters,
 } from "../../services/storyService";
 import { X } from "lucide-react";
 import searchBar from "../../assets/Thanh Search.png";
@@ -303,7 +304,8 @@ const Library = () => {
     stories,
     setStories,
     setCurrentStory,
-    setCurrentTab,
+setCurrentChapter,
+setCurrentTab,
     addStory,
     updateStory,
     deleteStory,
@@ -434,10 +436,26 @@ const Library = () => {
     );
   }, [stories, search]);
 
-  const handleWriteStory = (story) => {
+  const handleWriteStory = async (story) => {
+  try {
+    const chapters = await getChapters(story.id);
+
     setCurrentStory(story);
+
+    if (chapters.length > 0) {
+      setCurrentChapter(chapters[0]);
+    } else {
+      setCurrentChapter(null);
+    }
+
     setCurrentTab("write");
-  };
+  } catch (err) {
+    console.error("Lỗi khi tải chapters:", err);
+    setCurrentStory(story);
+    setCurrentChapter(null);
+    setCurrentTab("write");
+  }
+};
 
   const handleCreateStory = async () => {
     if (!newStoryData.title.trim()) {

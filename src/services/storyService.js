@@ -154,6 +154,103 @@ export async function autosaveStoryInSupabase(storyId, draft) {
         updated_at: new Date().toISOString(),
     };
 
+export async function getChapters(storyId) {
+    const { data, error } = await supabase
+        .from('chapters')
+        .select('*')
+        .eq('story_id', storyId)
+        .order('order_index', { ascending: true });
+
+    if (error) throw error;
+
+    return data.map((row) => ({
+        id: row.id,
+        storyId: row.story_id,
+        userId: row.user_id,
+        title: row.title,
+        content: row.content || '',
+        status: row.status,
+        wordCount: row.word_count || 0,
+        orderIndex: row.order_index,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+    }));
+}
+
+export async function createChapter(userId, storyId, chapter = {}) {
+    const { data, error } = await supabase
+        .from('chapters')
+        .insert({
+            story_id: storyId,
+            user_id: userId,
+            title: chapter.title || 'Phần mới',
+            content: chapter.content || '',
+            status: chapter.status || 'ongoing',
+            word_count: chapter.wordCount || 0,
+            order_index: chapter.orderIndex || 1,
+        })
+        .select()
+        .single();
+
+    if (error) throw error;
+
+    return {
+        id: data.id,
+        storyId: data.story_id,
+        userId: data.user_id,
+        title: data.title,
+        content: data.content || '',
+        status: data.status,
+        wordCount: data.word_count || 0,
+        orderIndex: data.order_index,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+    };
+}
+
+export async function updateChapterInSupabase(chapterId, updates) {
+    const payload = {
+        title: updates.title,
+        content: updates.content,
+        status: updates.status,
+        word_count: updates.wordCount,
+        updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+        .from('chapters')
+        .update(payload)
+        .eq('id', chapterId)
+        .select()
+        .single();
+
+    if (error) throw error;
+
+    return {
+        id: data.id,
+        storyId: data.story_id,
+        userId: data.user_id,
+        title: data.title,
+        content: data.content || '',
+        status: data.status,
+        wordCount: data.word_count || 0,
+        orderIndex: data.order_index,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+    };
+}
+
+export async function deleteChapterInSupabase(chapterId) {
+    const { error } = await supabase
+        .from('chapters')
+        .delete()
+        .eq('id', chapterId);
+
+    if (error) throw error;
+
+    return true;
+}
+
     const { data, error } = await supabase
         .from('stories')
         .update(payload)
@@ -170,4 +267,55 @@ export async function autosaveStoryInSupabase(storyId, draft) {
         wordCount: data.word_count,
         updatedAt: data.updated_at,
     };
+}
+
+export async function getChapters(storyId) {
+    const { data, error } = await supabase
+        .from('chapters')
+        .select('*')
+        .eq('story_id', storyId)
+        .order('order_index', { ascending: true });
+
+    if (error) throw error;
+
+    return data;
+}
+
+export async function createChapter(storyId, userId, chapter) {
+    const { data, error } = await supabase
+        .from('chapters')
+        .insert({
+            story_id: storyId,
+            user_id: userId,
+            title: chapter.title,
+            content: chapter.content || '',
+            word_count: chapter.wordCount || 0,
+            order_index: chapter.orderIndex || 0,
+            status: chapter.status || 'ongoing',
+        })
+        .select()
+        .single();
+
+    if (error) throw error;
+
+    return data;
+}
+
+export async function updateChapter(chapterId, updates) {
+    const { data, error } = await supabase
+        .from('chapters')
+        .update({
+            title: updates.title,
+            content: updates.content,
+            word_count: updates.wordCount,
+            status: updates.status,
+            updated_at: new Date().toISOString(),
+        })
+        .eq('id', chapterId)
+        .select()
+        .single();
+
+    if (error) throw error;
+
+    return data;
 }

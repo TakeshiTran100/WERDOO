@@ -89,11 +89,25 @@ export const useStoryStore = create((set) => {
       return saveToStorage(newState);
     }),
     
+    
+    
     currentStory: initialState?.currentStory || null,
     setCurrentStory: (story) => set((state) => {
       const newState = { ...state, currentStory: story };
       return saveToStorage(newState);
     }),
+
+    currentChapter: initialState?.currentChapter || null,
+
+setCurrentChapter: (chapter) => set((state) => {
+  const newState = {
+    ...state,
+    currentChapter: chapter
+  };
+
+  return saveToStorage(newState);
+}),
+
     updateCurrentStory: (updates) => set((state) => {
       const newState = {
         ...state,

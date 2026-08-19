@@ -18,7 +18,11 @@ import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import { motion } from "framer-motion";
 import { useStoryStore } from "../../store";
-import { updateStoryInSupabase, autosaveStoryInSupabase } from "../../services/storyService";
+import {
+  updateStoryInSupabase,
+  createChapter,
+  updateChapter,
+} from "../../services/storyService";
 import {
   Bold,
   Italic,
@@ -121,6 +125,8 @@ const Write = () => {
     addStory,
     updateStory,
     currentStory,
+    currentChapter,
+    setCurrentChapter,
     setCurrentTab,
     setCurrentStory,
     notes,
@@ -141,27 +147,36 @@ const Write = () => {
     x: 0,
     y: 0,
   });
-  const [chapterTitle, setChapterTitle] = React.useState(currentStory?.chapterTitle || "");
+  const [chapterTitle, setChapterTitle] = React.useState(activeChapterTitle);
   const chapterTitleRef = React.useRef(chapterTitle);
   const chapterTitleTextareaRef = React.useRef(null);
   const titleEditedRef = React.useRef(false);
 
-  React.useEffect(() => { chapterTitleRef.current = chapterTitle; }, [chapterTitle]);
+  React.useEffect(() => {
+    chapterTitleRef.current = chapterTitle;
+  }, [chapterTitle]);
 
   useLayoutEffect(() => {
     const el = chapterTitleTextareaRef.current;
     if (el) {
-      el.style.height = 'auto';
-      el.style.height = el.scrollHeight + 'px';
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
     }
   }, [chapterTitle]);
 
   React.useEffect(() => {
-    if (!titleEditedRef.current && currentStory?.chapterTitle !== undefined && currentStory.chapterTitle !== chapterTitle) {
+    if (
+      !titleEditedRef.current &&
+      currentStory?.chapterTitle !== undefined &&
+      currentStory.chapterTitle !== chapterTitle
+    ) {
       setChapterTitle(currentStory.chapterTitle);
     }
   }, [currentStory?.chapterTitle]);
-  const [chapSaveData, setChapSaveData] = React.useState({ title: "", status: "ongoing" });
+  const [chapSaveData, setChapSaveData] = React.useState({
+    title: "",
+    status: "ongoing",
+  });
   const [sidebarNotes, setSidebarNotes] = React.useState([]);
   const [pageLayout, setPageLayout] = React.useState("A4");
   const [customWidth, setCustomWidth] = React.useState("");
@@ -177,6 +192,10 @@ const Write = () => {
   React.useEffect(() => {
     if (notes) setSidebarNotes(notes);
   }, [notes]);
+
+  const activeContent = currentChapter?.content || currentStory?.content || "";
+  const activeChapterTitle =
+    currentChapter?.title || currentStory?.chapterTitle || "";
 
   const editor = useEditor({
     extensions: [
@@ -196,9 +215,7 @@ const Write = () => {
       Link.configure({ openOnClick: false }),
       Image,
     ],
-    content:
-      currentStory?.content ||
-      "<p></p>",
+    content: activeContent || "<p></p>",
     onUpdate: () => {
       scheduleAutosave();
     },
@@ -206,7 +223,9 @@ const Write = () => {
 
   const [wordCount, setWordCount] = React.useState(0);
   const wordCountRef = React.useRef(0);
-  React.useEffect(() => { wordCountRef.current = wordCount; }, [wordCount]);
+  React.useEffect(() => {
+    wordCountRef.current = wordCount;
+  }, [wordCount]);
   const [isFocus, setIsFocus] = React.useState(false);
 
   const calculateWordCount = useCallback(() => {
@@ -231,16 +250,25 @@ const Write = () => {
     clearTimeout(window._autoSaveTimer);
     window._autoSaveTimer = setTimeout(async () => {
       const latest = useStoryStore.getState().currentStory;
-      if (!latest?.id || !editor) return;
+      const latestChapter = useStoryStore.getState().currentChapter;
+
+      if (!latest?.id || !latestChapter?.id || !editor) return;
       setAutosaveStatus("saving");
       const freshContent = editor.getHTML();
       const freshChapterTitle = chapterTitleRef.current;
-      useStoryStore.getState().updateCurrentStory({ content: freshContent, chapterTitle: freshChapterTitle });
+      setCurrentChapter({
+        ...latestChapter,
+        content: freshContent,
+        title: freshChapterTitle,
+        wordCount: wordCountRef.current,
+      });
+
       try {
-        await autosaveStoryInSupabase(latest.id, {
+        await updateChapter(latestChapter.id, {
           content: freshContent,
-          chapterTitle: freshChapterTitle,
+          title: freshChapterTitle,
           wordCount: wordCountRef.current,
+          status: latestChapter.status || "ongoing",
         });
         setAutosaveStatus("saved");
         setLastSavedAt(new Date());
@@ -252,40 +280,47 @@ const Write = () => {
   };
 
   const handleSaveStory = async () => {
+    if (!currentStory?.id || !currentChapter?.id) return;
+
     clearTimeout(window._autoSaveTimer);
     setIsSaving(true);
-    try {
-      const storyData = {
-        title: currentStory?.title || "Truyện chưa đặt tên",
-        category: currentStory?.category || "Không xác định",
-        status: chapSaveData.status,
-        chapterTitle: chapterTitle,
-        content: editor.getHTML(),
-        wordCount: wordCount,
-        chapters: Math.max(currentStory?.chapters || 0, 1),
-        description: currentStory?.description || "",
-        coverImage: currentStory?.coverImage || null,
-      };
 
-      if (currentStory && currentStory.id) {
-        try {
-          const updated = await updateStoryInSupabase(currentStory.id, storyData);
-          updateStory(currentStory.id, updated);
-          setCurrentStory({ ...currentStory, ...updated });
-        } catch (err) {
-          console.error("Lỗi khi lưu truyện:", err);
-          alert("Lưu truyện thất bại, vui lòng thử lại.");
-          return;
-        }
-      } else {
-        const newId = Date.now();
-        const newStory = { ...storyData, id: newId, createdAt: new Date() };
-        addStory(newStory);
-        setCurrentStory(newStory);
-      }
+    try {
+      const freshContent = editor.getHTML();
+      const freshTitle = chapterTitle.trim() || "Phần mới";
+      const freshWordCount = wordCount;
+
+      const updated = await updateChapter(currentChapter.id, {
+        title: freshTitle,
+        content: freshContent,
+        wordCount: freshWordCount,
+        status: chapSaveData.status || currentChapter.status || "ongoing",
+      });
+
+      setCurrentChapter({
+        ...currentChapter,
+        ...updated,
+      });
+
+      const newChapter = await createChapter(
+        currentStory.id,
+        currentStory.user_id,
+        {
+          title: "Phần mới",
+          content: "",
+          wordCount: 0,
+          orderIndex: 1,
+          status: "ongoing",
+        },
+      );
+
+      setCurrentChapter(newChapter);
 
       setShowSaveDialog(false);
       setChapSaveData({ title: "", status: "ongoing" });
+    } catch (err) {
+      console.error("Lỗi khi lưu chapter:", err);
+      alert("Lưu phần viết thất bại, vui lòng thử lại.");
     } finally {
       setIsSaving(false);
     }
@@ -440,7 +475,9 @@ const Write = () => {
               </button>
               <span className="text-xs text-stone-400 mr-2">
                 {autosaveStatus === "saving" && "Đang tự động lưu..."}
-                {autosaveStatus === "saved" && lastSavedAt && `Đã lưu ${lastSavedAt.toLocaleTimeString("vi-VN")}`}
+                {autosaveStatus === "saved" &&
+                  lastSavedAt &&
+                  `Đã lưu ${lastSavedAt.toLocaleTimeString("vi-VN")}`}
                 {autosaveStatus === "error" && "Lỗi tự động lưu"}
               </span>
 
@@ -556,15 +593,26 @@ const Write = () => {
           {/* ✅ FIX: Xóa style prop thừa, font đã được inject qua CSS ở trên */}
 
           {/* Tiêu đề chương */}
-          <div className="mb-8 pb-6 border-b border-stone-300" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="mb-8 pb-6 border-b border-stone-300"
+            onClick={(e) => e.stopPropagation()}
+          >
             <textarea
               ref={chapterTitleTextareaRef}
               value={chapterTitle}
-              onChange={(e) => { setChapterTitle(e.target.value); scheduleAutosave(); }}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); editor?.chain().focus().run(); } }}
+              onChange={(e) => {
+                setChapterTitle(e.target.value);
+                scheduleAutosave();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  editor?.chain().focus().run();
+                }
+              }}
               rows={1}
               className="w-full bg-transparent text-center text-3xl font-bold text-stone-800 focus:outline-none placeholder-stone-400 resize-none overflow-hidden"
-              style={{ height: 'auto', minHeight: '2.5rem' }}
+              style={{ height: "auto", minHeight: "2.5rem" }}
               placeholder="Đặt tiêu đề của bạn..."
             />
           </div>
@@ -633,7 +681,11 @@ const Write = () => {
               );
             })()}
 
-          <EditorContent editor={editor} className="tiptap" spellCheck={false} />
+          <EditorContent
+            editor={editor}
+            className="tiptap"
+            spellCheck={false}
+          />
         </motion.div>
       </div>
 
@@ -721,28 +773,46 @@ const Write = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold mb-2" style={{ color: "#9b2335" }}>
+                <label
+                  className="block text-sm font-semibold mb-2"
+                  style={{ color: "#9b2335" }}
+                >
                   Tên Chương *
                 </label>
                 <input
                   type="text"
                   value={chapSaveData.title}
-                  onChange={(e) => setChapSaveData({ ...chapSaveData, title: e.target.value })}
+                  onChange={(e) =>
+                    setChapSaveData({ ...chapSaveData, title: e.target.value })
+                  }
                   className="w-full px-4 py-2 rounded-lg border focus:outline-none"
-                  style={{ backgroundColor: "#fff", borderColor: "#e8c8c8", color: "#2d0a0a" }}
+                  style={{
+                    backgroundColor: "#fff",
+                    borderColor: "#e8c8c8",
+                    color: "#2d0a0a",
+                  }}
                   placeholder="VD: Chương 1 - Khởi đầu..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2" style={{ color: "#9b2335" }}>
+                <label
+                  className="block text-sm font-semibold mb-2"
+                  style={{ color: "#9b2335" }}
+                >
                   Trạng Thái
                 </label>
                 <select
                   value={chapSaveData.status}
-                  onChange={(e) => setChapSaveData({ ...chapSaveData, status: e.target.value })}
+                  onChange={(e) =>
+                    setChapSaveData({ ...chapSaveData, status: e.target.value })
+                  }
                   className="w-full px-4 py-2 rounded-lg border focus:outline-none"
-                  style={{ backgroundColor: "#fff", borderColor: "#e8c8c8", color: "#2d0a0a" }}
+                  style={{
+                    backgroundColor: "#fff",
+                    borderColor: "#e8c8c8",
+                    color: "#2d0a0a",
+                  }}
                 >
                   <option value="ongoing">Đang Viết</option>
                   <option value="draft">Bản Nháp</option>
@@ -754,7 +824,11 @@ const Write = () => {
                 <button
                   onClick={() => setShowSaveDialog(false)}
                   className="flex-1 px-4 py-2 rounded-lg border font-medium"
-                  style={{ borderColor: "#e8c8c8", color: "#9b2335", backgroundColor: "#fff" }}
+                  style={{
+                    borderColor: "#e8c8c8",
+                    color: "#9b2335",
+                    backgroundColor: "#fff",
+                  }}
                 >
                   Hủy
                 </button>
